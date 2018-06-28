@@ -181,19 +181,22 @@ const findOtherTrackDetailByUuids = function(props, params, callback) {
 }
 
 const createElementInstance = function(props, params, callback) {
-let userId = AppUtils.getProperty(params, props.userId),
+let element = AppUtils.getProperty(params, props.element),
+    userId = AppUtils.getProperty(params, props.userId),
     trackId = AppUtils.getProperty(params, props.trackId),
     name= AppUtils.getProperty(params, props.name),
     logSize = AppUtils.getProperty(params, props.logSize),
     config = AppUtils.getProperty(params, props.config),
-    fogInstanceId = AppUtils.getProperty(params, props.fogInstanceId);
+    fogInstanceId = AppUtils.getProperty(params, props.fogInstanceId),
+    volumeMappings = AppUtils.getProperty(params, props.volumeMappings);
+    volumeMappings = Object.is(volumeMappings, undefined) ? '{"volumemappings":[]}' : volumeMappings;
 
     if(!config)
    {
      config = "{}";
    }
   ElementInstanceManager
-    .createElementInstance(params.element, userId, trackId, config, name, logSize, fogInstanceId)
+    .createElementInstance(element, userId, trackId, config, name, logSize, fogInstanceId, volumeMappings)
     .then(AppUtils.onCreate.bind(null, params, props.setProperty, 'Unable to create Element Instance', callback));
 }
 
@@ -393,6 +396,23 @@ const getElementInstanceImagesByFogIdAndNewFogType = function (props, params, ca
         .then(AppUtils.onFindOptional.bind(null, params, props.setProperty, callback));
 };
 
+const getElementInstanceByNameOnTrackForUser = function (props, params, callback) {
+    let userId = AppUtils.getProperty(params, props.userId),
+        trackId = AppUtils.getProperty(params, props.trackId),
+        elementName = AppUtils.getProperty(params, props.elementName);
+
+    let queryProps = {
+        userId: userId,
+        trackId: trackId,
+        elementName: elementName
+    };
+
+    let errMsg = 'Unable to find Element Instance with name ' + elementName;
+    ElementInstanceManager
+        .getElementInstanceByNameOnTrackForUser(queryProps)
+        .then(AppUtils.onFind.bind(null, params, props.setProperty, errMsg, callback))
+};
+
 export default {
   createDebugConsole: createDebugConsole,
   createElementInstance: createElementInstance,
@@ -432,5 +452,6 @@ export default {
   getElementInstancesByFogId: getElementInstancesByFogId,
   getElementInstancesByFogIdOptional: getElementInstancesByFogIdOptional,
   getElementInstanceWithImages: getElementInstanceWithImages,
-  getElementInstanceImagesByFogIdAndNewFogType: getElementInstanceImagesByFogIdAndNewFogType
+  getElementInstanceImagesByFogIdAndNewFogType: getElementInstanceImagesByFogIdAndNewFogType,
+  getElementInstanceByNameOnTrackForUser: getElementInstanceByNameOnTrackForUser
 };
