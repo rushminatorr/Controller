@@ -37,16 +37,6 @@ function generateTransaction(f) {
   }
 }
 
-function generateTransaction(f) {
-  return function () {
-    const args = Array.prototype.slice.call(arguments);
-    return retry(() => {
-      const t = transaction(f);
-      return t.apply(this, args);
-    }, 5)
-  }
-}
-
 module.exports = {
   generateTransaction: generateTransaction,
 };
