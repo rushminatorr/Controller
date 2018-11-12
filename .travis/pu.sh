@@ -30,6 +30,7 @@ make_version() {
     npm version patch -m "chore: dev version %s"
   else
     npm version minor -m "chore: release version %s"
+  fi
 }
 
 upload_files() {
