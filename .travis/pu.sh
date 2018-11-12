@@ -26,10 +26,10 @@ make_version() {
   
   # Run the deploy build and increment the package versions
   # %s is the placeholder for the created tag
-  if ["$TRAVIS_BRANCH" == "dbusel/feature-automated-packaging"]; then
+  if [[ $TRAVIS_BRANCH == 'dbusel/feature-automated-packaging' ]]; then
     npm version patch -m "chore: dev version %s"
   else
-    npm version minor -m "chore: release version %s"
+    npm version patch -m "chore: release version %s"
   fi
 }
 
