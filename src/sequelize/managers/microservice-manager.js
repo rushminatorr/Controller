@@ -102,6 +102,50 @@ class MicroserviceManager extends BaseManager {
     }, {transaction: transaction})
   }
 
+  findAllActiveFlowSourceRouteMicroservices(iofogUuid, transaction) {
+    return Microservice.findAll({
+      include: [
+        {
+          model: Flow,
+          as: 'flow',
+          required: true,
+          attributes: ['isActivated']
+        },
+        {
+          model: Routing,
+          as: 'routes',
+          required: true
+        }
+      ],
+      where: {
+        '$flow.is_activated$': true,
+        iofogUuid: iofogUuid
+      }
+    }, {transaction: transaction})
+  }
+
+  findAllActiveFlowDestRouteMicroservices(iofogUuid, transaction) {
+    return Microservice.findAll({
+      include: [
+        {
+          model: Flow,
+          as: 'flow',
+          required: true,
+          attributes: ['isActivated']
+        },
+        {
+          model: Routing,
+          as: 'destRoutes',
+          required: true
+        }
+      ],
+      where: {
+        '$flow.is_activated$': true,
+        iofogUuid: iofogUuid
+      }
+    }, {transaction: transaction})
+  }
+
   findAllActiveFlowMicroservices(iofogUuid, transaction) {
     return Microservice.findAll({
       include: [
@@ -145,8 +189,8 @@ class MicroserviceManager extends BaseManager {
         }
       ],
       where: {
-        iofogUuid: iofogUuid,
-        '$flow.is_activated$': true
+        '$flow.is_activated$': true,
+        iofogUuid: iofogUuid
       }
     }, {transaction: transaction})
   }

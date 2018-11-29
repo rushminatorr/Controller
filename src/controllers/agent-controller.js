@@ -52,6 +52,10 @@ const getAgentMicroservicesEndPoint = async function (req, fog) {
   return await AgentService.getAgentMicroservices(fog);
 };
 
+const getAgentMicroserviceRoutesEndPoint = async function (req, fog) {
+  return await AgentService.getAgentMicroserviceRoutes(fog);
+};
+
 const getAgentMicroserviceEndPoint = async function (req, fog) {
   const microserviceUuid = req.params.microserviceUuid;
 
@@ -119,6 +123,7 @@ module.exports = {
   getAgentConfigChangesEndPoint: AuthDecorator.checkFogToken(getAgentConfigChangesEndPoint),
   updateAgentStatusEndPoint: AuthDecorator.checkFogToken(updateAgentStatusEndPoint),
   getAgentMicroservicesEndPoint: AuthDecorator.checkFogToken(getAgentMicroservicesEndPoint),
+  getAgentMicroserviceRoutesEndPoint: AuthDecorator.checkFogToken(getAgentMicroserviceRoutesEndPoint),
   getAgentMicroserviceEndPoint: AuthDecorator.checkFogToken(getAgentMicroserviceEndPoint),
   getAgentRegistriesEndPoint: AuthDecorator.checkFogToken(getAgentRegistriesEndPoint),
   getAgentTunnelEndPoint: AuthDecorator.checkFogToken(getAgentTunnelEndPoint),

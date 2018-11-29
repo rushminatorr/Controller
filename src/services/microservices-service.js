@@ -780,31 +780,45 @@ async function _listPortMappings(microserviceUuid, user, isCLI, transaction) {
   return await _buildPortsList(portsPairs, transaction)
 }
 
-async function getPhysicalConections(microservice, transaction) {
-  let res = []
-  const pubModes = await MicroservicePublicModeManager.findAll({microserviceUuid: microservice.uuid}, transaction)
-  for (const pm of pubModes) {
-    res.push(pm.networkMicroserviceUuid)
-  }
-
-  const sourceRoutes = await RoutingManager.findAll({sourceMicroserviceUuid: microservice.uuid}, transaction)
-  for (const sr of sourceRoutes) {
-    if (!sr.sourceIofogUuid || !sr.destIofogUuid) {
-      continue;
-    } else if (sr.sourceIofogUuid === sr.destIofogUuid) {
-      res.push(sr.destMicroserviceUuid)
-    } else if (sr.sourceIofogUuid !== sr.destIofogUuid) {
-      res.push(sr.sourceNetworkMicroserviceUuid)
-    }
-  }
-
-  const netwRoutes = await RoutingManager.findAll({destNetworkMicroserviceUuid: microservice.uuid}, transaction)
-  for (const nr of netwRoutes) {
-    res.push(nr.destMicroserviceUuid)
-  }
-
-  return res
-}
+// async function getPhysicalConections(microservices, fog, transaction) {
+//   let res = []
+//
+//   const sourceRoutes = await RoutingManager.findAll({sourceIofogUuid: fog.uuid}, transaction);
+//   const destRoutes = await RoutingManager.findAll({destIofogUuid: fog.uuid}, transaction)
+//
+//   for (microservice of microservices) {
+//
+//   }
+//
+//
+//   const sourceRoutes = await RoutingManager.findAll({sourceMicroserviceUuid: microservice.uuid}, transaction);
+//   for (const sourceRoute of sourceRoutes) {
+//     if (sourceRoute.sourceIofogUuid && sourceRoute.destIofogUuid) {
+//       const routeObj = sourceRoute.sourceIofogUuid === sourceRoute.destIofogUuid
+//         ?
+//         {
+//           microserviceUuid: sourceRoute.destMicroserviceUuid,
+//           isLocal: true,
+//           routeConfig: {}
+//         }
+//         :
+//         {
+//           microserviceUuid: sourceRoute.destMicroserviceUuid,
+//           isLocal: false,
+//           routeConfig: {
+//             host: 'localhost',
+//             port: 61616,
+//             user: 'agent',
+//             password: 'agent123',
+//             passKey: '123'
+//           }
+//         };
+//       res.push(routeObj);
+//     }
+//   }
+//
+//   return res
+// }
 
 async function _getLogicalNetworkRoutesByFog(iofogUuid, transaction) {
   let res = [];
@@ -949,6 +963,6 @@ module.exports = {
   createVolumeMapping: TransactionDecorator.generateTransaction(_createVolumeMapping),
   deleteVolumeMapping: TransactionDecorator.generateTransaction(_deleteVolumeMapping),
   listVolumeMappings: TransactionDecorator.generateTransaction(_listVolumeMappings),
-  getPhysicalConections: getPhysicalConections,
+  // getPhysicalConections: getPhysicalConections,
   deleteNotRunningMicroservices: _deleteNotRunningMicroservices
 };

@@ -180,6 +180,30 @@ module.exports = [
   },
   {
     method: 'get',
+    path: '/api/v3/agent/routes',
+    middleware: async (req, res) => {
+      const successCode = constants.HTTP_CODE_SUCCESS;
+      const errorCodes = [
+        {
+          code: constants.HTTP_CODE_NOT_FOUND,
+          errors: [Errors.NotFoundError]
+        },
+        {
+          code: constants.HTTP_CODE_UNAUTHORIZED,
+          errors: [Errors.AuthenticationError]
+        }
+      ];
+
+      const getAgentMicroserviceRoutesEndPoint = ResponseDecorator.handleErrors(AgentController.getAgentMicroserviceRoutesEndPoint, successCode, errorCodes);
+      const responseObject = await getAgentMicroserviceRoutesEndPoint(req);
+
+      res
+        .status(responseObject.code)
+        .send(responseObject.body)
+    }
+  },
+  {
+    method: 'get',
     path: '/api/v3/agent/microservices/:microserviceUuid',
     middleware: async (req, res) => {
       const successCode = constants.HTTP_CODE_SUCCESS;

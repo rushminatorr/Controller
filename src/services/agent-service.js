@@ -37,6 +37,7 @@ const formidable = require('formidable');
 const logger = require('../logger');
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
+const _ = require('underscore');
 
 const agentProvision = async function (provisionData, transaction) {
 
@@ -210,6 +211,79 @@ const _updateMicroserviceStatuses = async function (microserviceStatus, transact
   }
 };
 
+const getAgentMicroserviceRoutes = async function (fog, transaction) {
+  const sourceMicroservices = await MicroserviceManager.findAllActiveFlowSourceRouteMicroservices(fog.uuid, transaction);
+  const destMicroservices = await MicroserviceManager.findAllActiveFlowDestRouteMicroservices(fog.uuid, transaction);
+  const res = [];
+
+  for (let sourceMicroservice of sourceMicroservices) {
+    const receivers = sourceMicroservice.routes
+      .filter(route => route.sourceIofogUuid && route.destIofogUuid)
+      .map(route => {
+        let obj;
+        if (route.sourceIofogUuid === route.destIofogUuid) {
+          obj = {
+            microserviceUuid: route.destMicroserviceUuid,
+            isLocal: true,
+            routeConfig: {}
+          }
+        } else {
+          obj = {
+            microserviceUuid: route.destMicroserviceUuid,
+            isLocal: false,
+            routeConfig: {
+              host: 'localhost',
+              port: 61616,
+              user: 'agent',
+              password: 'agent123',
+              passKey: '123'
+            }
+          }
+        }
+        return obj;
+      });
+    const route = {
+      microserviceUuid: sourceMicroservice.uuid,
+      isLocal: true,
+      routeConfig: {},
+      receivers: receivers
+    };
+    res.push(route);
+  }
+
+  const destRoutes = _.filter(_.flatten(_.map(destMicroservices, destMicroservice => destMicroservice.destRoutes)),
+    route => route.sourceMicroserviceUuid !== route.destMicroserviceUuid);
+  const groupedRoutes = _.groupBy(destRoutes, route => route.sourceMicroserviceUuid);
+  for (let sourceRoutes in groupedRoutes) {
+    if (groupedRoutes.hasOwnProperty(sourceRoutes)) {
+      const route = {
+        isLocal: false,
+        routeConfig: {
+          host: 'localhost',
+          port: 61616,
+          user: 'agent',
+          password: 'agent123',
+          passKey: '123'
+        },
+        receivers: []
+      };
+      for (let sourceRoute of sourceRoutes) {
+        route.microserviceUuid = sourceRoute.sourceMicroserviceUuid;
+        const receiver = {
+          microserviceUuid: sourceroute.destMicroserviceUuid,
+          isLocal: true,
+          routeConfig: {}
+        };
+        route.receivers.push(receiver);
+      }
+      res.push(route);
+    }
+  }
+  return {
+    routes: res
+  }
+};
+
 const getAgentMicroservices = async function (fog, transaction) {
   const microservices = await MicroserviceManager.findAllActiveFlowMicroservices(fog.uuid, transaction);
 
@@ -221,7 +295,7 @@ const getAgentMicroservices = async function (fog, transaction) {
     const image = images.find(image => image.fogTypeId === fogTypeId);
     const imageId = image ? image.containerImage : '';
 
-    const routes = await MicroserviceService.getPhysicalConections(microservice, transaction);
+    // const routes = await MicroserviceService.getPhysicalConections(microservice, transaction);
 
     const responseMicroservice = {
       uuid: microservice.uuid,
@@ -236,7 +310,7 @@ const getAgentMicroservices = async function (fog, transaction) {
       imageSnapshot: microservice.imageSnapshot,
       delete: microservice.delete,
       deleteWithCleanup: microservice.deleteWithCleanup,
-      routes: routes
+      // routes: routes
     };
 
     response.push(responseMicroservice);
@@ -395,7 +469,7 @@ const putImageSnapshot = async function (req, fog, transaction) {
   if (!fs.existsSync(form.uploadDir)) {
     fs.mkdirSync(form.uploadDir);
   }
-  await saveSnapShot(req, form,fog, transaction);
+  await saveSnapShot(req, form, fog, transaction);
   return {};
 };
 
@@ -476,5 +550,6 @@ module.exports = {
   updateHalUsbInfo: TransactionDecorator.generateFakeTransaction(updateHalUsbInfo),
   deleteNode: TransactionDecorator.generateFakeTransaction(deleteNode),
   getImageSnapshot: TransactionDecorator.generateFakeTransaction(getImageSnapshot),
-  putImageSnapshot: TransactionDecorator.generateFakeTransaction(putImageSnapshot)
+  putImageSnapshot: TransactionDecorator.generateFakeTransaction(putImageSnapshot),
+  getAgentMicroserviceRoutes: TransactionDecorator.generateFakeTransaction(getAgentMicroserviceRoutes)
 };
