@@ -232,11 +232,11 @@ const getAgentMicroserviceRoutes = async function (fog, transaction) {
             microserviceUuid: route.destMicroserviceUuid,
             isLocal: false,
             routeConfig: {
-              host: 'localhost',
+              host: 'connector.iofog.org',
               port: 61616,
               user: 'agent',
               password: 'agent123',
-              passKey: '123'
+              passKey: '0ad55da5-e008-4698-9e42-a8451717b727'
             }
           }
         }
@@ -254,30 +254,28 @@ const getAgentMicroserviceRoutes = async function (fog, transaction) {
   const destRoutes = _.filter(_.flatten(_.map(destMicroservices, destMicroservice => destMicroservice.destRoutes)),
     route => route.sourceMicroserviceUuid !== route.destMicroserviceUuid);
   const groupedRoutes = _.groupBy(destRoutes, route => route.sourceMicroserviceUuid);
-  for (let sourceRoutes in groupedRoutes) {
-    if (groupedRoutes.hasOwnProperty(sourceRoutes)) {
-      const route = {
-        isLocal: false,
-        routeConfig: {
-          host: 'localhost',
-          port: 61616,
-          user: 'agent',
-          password: 'agent123',
-          passKey: '123'
-        },
-        receivers: []
+  for (let key of Object.keys(groupedRoutes)) {
+    const route = {
+      isLocal: false,
+      routeConfig: {
+        host: 'connector.iofog.org',
+        port: 61616,
+        user: 'agent',
+        password: 'agent123',
+        passKey: '0ad55da5-e008-4698-9e42-a8451717b727'
+      },
+      receivers: []
+    };
+    for (let sourceRoute of groupedRoutes[key]) {
+      route.microserviceUuid = sourceRoute.sourceMicroserviceUuid;
+      const receiver = {
+        microserviceUuid: sourceRoute.destMicroserviceUuid,
+        isLocal: true,
+        routeConfig: {}
       };
-      for (let sourceRoute of sourceRoutes) {
-        route.microserviceUuid = sourceRoute.sourceMicroserviceUuid;
-        const receiver = {
-          microserviceUuid: sourceroute.destMicroserviceUuid,
-          isLocal: true,
-          routeConfig: {}
-        };
-        route.receivers.push(receiver);
-      }
-      res.push(route);
+      route.receivers.push(receiver);
     }
+    res.push(route);
   }
   return {
     routes: res
