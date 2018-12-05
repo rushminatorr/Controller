@@ -364,27 +364,34 @@ async function _createSimpleRoute(sourceMicroservice, destMicroservice, transact
 }
 
 async function _createRouteOverConnector(sourceMicroservice, destMicroservice, user, transaction) {
-  //open comsat
-  const justOpenedConnectorsPorts = await ConnectorService.openPortOnRandomConnector(false, transaction)
 
-  const ports = justOpenedConnectorsPorts.ports
-  const connector = justOpenedConnectorsPorts.connector
+  const topicName = "pubsub.iofog." + sourceMicroservice.uuid;
+  const data = await ConnectorService.createTopicOnRandomConnector(topicName, false, transaction)
+
+  const passKey = data.passKey;
+  const connector = data.connector;
 
   const createConnectorPortData = {
-    port1: ports.port1,
-    port2: ports.port2,
-    maxConnectionsPort1: 1,
-    maxConnectionsPort2: 1,
-    passcodePort1: ports.passcode1,
-    passcodePort2: ports.passcode2,
-    heartBeatAbsenceThresholdPort1: 60000,
-    heartBeatAbsenceThresholdPort2: 60000,
-    connectorId: ports.connectorId,
-    mappingId: ports.id
+    passcodePort1: passKey,
+    connectorId: connector.id
   };
-  const connectorPort = await ConnectorPortManager.create(createConnectorPortData, transaction)
 
-  const networkCatalogItem = await CatalogService.getNetworkCatalogItem(transaction)
+  const connectorPort = await ConnectorPortManager.create(createConnectorPortData, transaction);
+  // const createConnectorPortData = {
+  //   port1: ports.port1,
+  //   port2: ports.port2,
+  //   maxConnectionsPort1: 1,
+  //   maxConnectionsPort2: 1,
+  //   passcodePort1: ports.passcode1,
+  //   passcodePort2: ports.passcode2,
+  //   heartBeatAbsenceThresholdPort1: 60000,
+  //   heartBeatAbsenceThresholdPort2: 60000,
+  //   connectorId: ports.connectorId,
+  //   mappingId: ports.id
+  // };
+  // const connectorPort = await ConnectorPortManager.create(createConnectorPortData, transaction)
+  //
+  // const networkCatalogItem = await CatalogService.getNetworkCatalogItem(transaction)
 
   let cert;
   if (!connector.devMode && connector.cert) {
@@ -392,48 +399,48 @@ async function _createRouteOverConnector(sourceMicroservice, destMicroservice, u
   }
 
   //create netw ms1
-  const sourceNetwMsConfig = {
-    'mode': 'private',
-    'host': connector.domain,
-    'cert': cert,
-    'port': ports.port1,
-    'passcode': ports.passcode1,
-    'connectioncount': 1,
-    'localhost': 'iofog',
-    'localport': 0,
-    'heartbeatfrequency': 20000,
-    'heartbeatabsencethreshold': 60000,
-    'devmode': connector.devMode
-  }
-  const sourceNetworkMicroservice = await _createNetworkMicroserviceForMaster(
-    sourceMicroservice,
-    sourceNetwMsConfig,
-    networkCatalogItem,
-    user,
-    transaction
-  );
+  // const sourceNetwMsConfig = {
+  //   'mode': 'private',
+  //   'host': connector.domain,
+  //   'cert': cert,
+  //   'port': ports.port1,
+  //   'passcode': ports.passcode1,
+  //   'connectioncount': 1,
+  //   'localhost': 'iofog',
+  //   'localport': 0,
+  //   'heartbeatfrequency': 20000,
+  //   'heartbeatabsencethreshold': 60000,
+  //   'devmode': connector.devMode
+  // }
+  // const sourceNetworkMicroservice = await _createNetworkMicroserviceForMaster(
+  //   sourceMicroservice,
+  //   sourceNetwMsConfig,
+  //   networkCatalogItem,
+  //   user,
+  //   transaction
+  // );
 
   //create netw ms2
-  const destNetwMsConfig = {
-    'mode': 'private',
-    'host': connector.domain,
-    'cert': cert,
-    'port': ports.port2,
-    'passcode': ports.passcode2,
-    'connectioncount': 1,
-    'localhost': 'iofog',
-    'localport': 0,
-    'heartbeatfrequency': 20000,
-    'heartbeatabsencethreshold': 60000,
-    'devmode': connector.devMode
-  }
-  const destNetworkMicroservice = await _createNetworkMicroserviceForMaster(
-    destMicroservice,
-    destNetwMsConfig,
-    networkCatalogItem,
-    user,
-    transaction
-  );
+  // const destNetwMsConfig = {
+  //   'mode': 'private',
+  //   'host': connector.domain,
+  //   'cert': cert,
+  //   'port': ports.port2,
+  //   'passcode': ports.passcode2,
+  //   'connectioncount': 1,
+  //   'localhost': 'iofog',
+  //   'localport': 0,
+  //   'heartbeatfrequency': 20000,
+  //   'heartbeatabsencethreshold': 60000,
+  //   'devmode': connector.devMode
+  // }
+  // const destNetworkMicroservice = await _createNetworkMicroserviceForMaster(
+  //   destMicroservice,
+  //   destNetwMsConfig,
+  //   networkCatalogItem,
+  //   user,
+  //   transaction
+  // );
 
   //create new route
   const routeData = {
@@ -442,11 +449,13 @@ async function _createRouteOverConnector(sourceMicroservice, destMicroservice, u
     destMicroserviceUuid: destMicroservice.uuid,
     sourceIofogUuid: sourceMicroservice.iofogUuid,
     destIofogUuid: destMicroservice.iofogUuid,
-    sourceNetworkMicroserviceUuid: sourceNetworkMicroservice.uuid,
-    destNetworkMicroserviceUuid: destNetworkMicroservice.uuid,
+    // sourceNetworkMicroserviceUuid: sourceNetworkMicroservice.uuid,
+    // destNetworkMicroserviceUuid: destNetworkMicroservice.uuid,
+    sourceNetworkMicroserviceUuid: null,
+    destNetworkMicroserviceUuid: null,
     connectorPortId: connectorPort.id
-  }
-  await RoutingManager.create(routeData, transaction)
+  };
+  await RoutingManager.create(routeData, transaction);
 
   await _switchOnUpdateFlagsForMicroservicesInRoute(sourceMicroservice, destMicroservice, transaction)
 }
@@ -596,7 +605,7 @@ async function _createSimplePortMapping(microservice, portMappingData, user, tra
 
 async function _createPortMappingOverConnector(microservice, portMappingData, user, transaction) {
   //open comsat
-  const justOpenedConnectorsPorts = await ConnectorService.openPortOnRandomConnector(true, transaction)
+  const justOpenedConnectorsPorts = await ConnectorService.createRouteOnRandomConnector(true, transaction)
 
   const ports = justOpenedConnectorsPorts.ports
   const connector = justOpenedConnectorsPorts.connector

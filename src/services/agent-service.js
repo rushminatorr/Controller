@@ -211,6 +211,20 @@ const _updateMicroserviceStatuses = async function (microserviceStatus, transact
   }
 };
 
+const getAgentConnectors = async function (fog, transaction) {
+  return {
+    connectors: [
+      {
+        id: 3,
+        host: "connector.iofog.org",
+        port: 61616,
+        user: "agent",
+        password: "agent123"
+      }
+    ]
+  }
+};
+
 const getAgentMicroserviceRoutes = async function (fog, transaction) {
   const sourceMicroservices = await MicroserviceManager.findAllActiveFlowSourceRouteMicroservices(fog.uuid, transaction);
   const destMicroservices = await MicroserviceManager.findAllActiveFlowDestRouteMicroservices(fog.uuid, transaction);
@@ -225,18 +239,17 @@ const getAgentMicroserviceRoutes = async function (fog, transaction) {
           obj = {
             microserviceUuid: route.destMicroserviceUuid,
             isLocal: true,
-            routeConfig: {}
+            config: {}
           }
         } else {
           obj = {
+            //remote consumers
             microserviceUuid: route.destMicroserviceUuid,
             isLocal: false,
-            routeConfig: {
-              host: 'connector.iofog.org',
-              port: 61616,
-              user: 'agent',
-              password: 'agent123',
-              passKey: '0ad55da5-e008-4698-9e42-a8451717b727'
+            config: {
+              connectorId: route.connectorPort.connectorId,
+              // topicName: sourceMicroservice.uuid,
+              passKey: route.connectorPort.passcodePort1
             }
           }
         }
@@ -251,27 +264,28 @@ const getAgentMicroserviceRoutes = async function (fog, transaction) {
     res.push(route);
   }
 
-  const destRoutes = _.filter(_.flatten(_.map(destMicroservices, destMicroservice => destMicroservice.destRoutes)),
-    route => route.sourceMicroserviceUuid !== route.destMicroserviceUuid);
+  const destRoutes = _.filter(
+    _.flatten(_.map(destMicroservices, destMicroservice => destMicroservice.destRoutes)),
+    route => route.sourceMicroserviceUuid !== route.destMicroserviceUuid
+  );
   const groupedRoutes = _.groupBy(destRoutes, route => route.sourceMicroserviceUuid);
   for (let key of Object.keys(groupedRoutes)) {
+    //remote producer
     const route = {
       isLocal: false,
-      routeConfig: {
-        host: 'connector.iofog.org',
-        port: 61616,
-        user: 'agent',
-        password: 'agent123',
-        passKey: '0ad55da5-e008-4698-9e42-a8451717b727'
-      },
+      config: {},
       receivers: []
     };
+    //local consumers
     for (let sourceRoute of groupedRoutes[key]) {
       route.microserviceUuid = sourceRoute.sourceMicroserviceUuid;
+      route.config.passKey = sourceRoute.connectorPort.passcodePort1;
+      route.config.connectorId = sourceRoute.connectorPort.connectorId;
+      route.config.topicName = sourceRoute.sourceMicroserviceUuid;
       const receiver = {
         microserviceUuid: sourceRoute.destMicroserviceUuid,
         isLocal: true,
-        routeConfig: {}
+        config: {}
       };
       route.receivers.push(receiver);
     }
@@ -549,5 +563,6 @@ module.exports = {
   deleteNode: TransactionDecorator.generateFakeTransaction(deleteNode),
   getImageSnapshot: TransactionDecorator.generateFakeTransaction(getImageSnapshot),
   putImageSnapshot: TransactionDecorator.generateFakeTransaction(putImageSnapshot),
-  getAgentMicroserviceRoutes: TransactionDecorator.generateFakeTransaction(getAgentMicroserviceRoutes)
+  getAgentMicroserviceRoutes: TransactionDecorator.generateFakeTransaction(getAgentMicroserviceRoutes),
+  getAgentConnectors: TransactionDecorator.generateFakeTransaction(getAgentConnectors)
 };

@@ -103,6 +103,30 @@ async function openPortOnRandomConnector(isPublicAccess, transaction) {
   return {ports: ports, connector: connector}
 }
 
+async function createTopicOnRandomConnector(topicName, isPublicAccess, transaction) {
+  let isConnectorPortOpen = false;
+  let res = null;
+  let connector = null;
+  const maxAttempts = 5;
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      connector = await _getRandomConnector(transaction);
+      res = await createConnectorTopic(connector, topicName, isPublicAccess, transaction);
+      if (res) {
+        isConnectorPortOpen = true;
+        break;
+      }
+    } catch (e) {
+      logger.warn(`Failed to open ports on comsat. Attempts ${i + 1}/${maxAttempts}`)
+    }
+  }
+  if (!isConnectorPortOpen) {
+    throw new Error('Not able to open port on remote CONNECTOR. Gave up after 5 attempts.')
+  }
+  res.connectorId = connector.id;
+  return {passKey: res.passKey, connector: connector}
+}
+
 async function _makeRequest(connector, options, data) {
   return new Promise((resolve, reject) => {
     let httpreq = (connector.devMode ? http : https).request(options, function (response) {
@@ -166,7 +190,35 @@ async function openPortsOnConnector(connector, isPublicAccess, transaction) {
   }
 
   const ports = await _makeRequest(connector, options, data);
-  return ports
+  return ports;
+}
+
+async function createConnectorTopic(connector, topicName, isPublicAccess, transaction) {
+  // let data = JSON.stringify({
+  //   topicName: topicName
+  // });
+  let data = qs.stringify({
+    topicName: topicName
+  });
+  let port = connector.devMode ? constants.CONNECTOR_HTTP_PORT : constants.CONNECTOR_HTTPS_PORT;
+
+  let options = {
+    host: connector.domain,
+    port: port,
+    path: '/topic',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Length': Buffer.byteLength(data)
+    }
+  };
+  if (!connector.devMode && connector.cert && connector.isSelfSignedCert === true) {
+    const ca = fs.readFileSync(connector.cert);
+    options.ca = new Buffer(ca);
+  }
+
+  const res = await _makeRequest(connector, options, data)
+  return res;
 }
 
 async function _getRandomConnector(transaction) {
@@ -207,6 +259,7 @@ module.exports = {
   updateConnector: TransactionDecorator.generateTransaction(_updateConnector),
   deleteConnector: TransactionDecorator.generateTransaction(_deleteConnector),
   getConnectorList: TransactionDecorator.generateTransaction(_getConnectorList),
-  openPortOnRandomConnector: openPortOnRandomConnector,
+  createRouteOnRandomConnector: openPortOnRandomConnector,
+  createTopicOnRandomConnector: createTopicOnRandomConnector,
   closePortOnConnector: closePortOnConnector
 }

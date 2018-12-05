@@ -25,6 +25,7 @@ const User = models.User;
 const Routing = models.Routing;
 const Registry = models.Registry;
 const MicroserviceStatus = models.MicroserviceStatus;
+const ConnectorPort = models.ConnectorPort;
 
 const microserviceExcludedFields = [
   'configLastUpdated',
@@ -114,7 +115,15 @@ class MicroserviceManager extends BaseManager {
         {
           model: Routing,
           as: 'routes',
-          required: true
+          required: true,
+          include: [
+            {
+              model: ConnectorPort,
+              as: 'connectorPort',
+              required: true,
+              attributes: ['passcodePort1', 'connectorId']
+            }
+          ]
         }
       ],
       where: {
@@ -136,7 +145,15 @@ class MicroserviceManager extends BaseManager {
         {
           model: Routing,
           as: 'destRoutes',
-          required: true
+          required: true,
+          include: [
+            {
+              model: ConnectorPort,
+              as: 'connectorPort',
+              required: true,
+              attributes: ['passcodePort1', 'connectorId']
+            }
+          ]
         }
       ],
       where: {
