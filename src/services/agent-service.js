@@ -248,7 +248,7 @@ const getAgentMicroserviceRoutes = async function (fog, transaction) {
             isLocal: false,
             config: {
               connectorId: route.connectorPort.connectorId,
-              // topicName: sourceMicroservice.uuid,
+              topicName: sourceMicroservice.uuid,
               passKey: route.connectorPort.passcodePort1
             }
           }
