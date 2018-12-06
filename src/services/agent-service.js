@@ -224,7 +224,9 @@ const getAgentConnectors = async function (fog, transaction) {
       password: "agent123"
     })
   }
-  return res;
+  return {
+    connectors: res
+  };
 };
 
 const getAgentMicroserviceRoutes = async function (fog, transaction) {
