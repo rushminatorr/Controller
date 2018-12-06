@@ -31,6 +31,7 @@ const USBInfoManager = require('../sequelize/managers/usb-info-manager');
 const TunnelManager = require('../sequelize/managers/tunnel-manager');
 const MicroserviceManager = require('../sequelize/managers/microservice-manager');
 const MicroserviceService = require('../services/microservices-service');
+const ConnectorManager = require('../sequelize/managers/connector-manager');
 const path = require('path');
 const fs = require('fs');
 const formidable = require('formidable');
@@ -212,17 +213,18 @@ const _updateMicroserviceStatuses = async function (microserviceStatus, transact
 };
 
 const getAgentConnectors = async function (fog, transaction) {
-  return {
-    connectors: [
-      {
-        id: 3,
-        host: "connector.iofog.org",
-        port: 61616,
-        user: "agent",
-        password: "agent123"
-      }
-    ]
+  const connectors = await ConnectorManager.findAll({}, transaction);
+  const res = [];
+  for (connector of connectors) {
+    res.push({
+      id: connector.id,
+      host: connector.domain,
+      port: 61616,
+      user: "agent",
+      password: "agent123"
+    })
   }
+  return res;
 };
 
 const getAgentMicroserviceRoutes = async function (fog, transaction) {
