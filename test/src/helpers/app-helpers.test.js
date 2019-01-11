@@ -1,93 +1,88 @@
-const crypto = require('crypto')
-const { expect } = require('chai')
-const fs = require('fs')
-const path = require('path')
-const portscanner = require('portscanner')
-const sinon = require('sinon')
+const crypto = require('crypto');
+const {expect} = require('chai');
+const fs = require('fs');
+const path = require('path');
+const portscanner = require('portscanner');
+const sinon = require('sinon');
 
-const AppHelpers = require('../../../src/helpers/app-helper')
-const Config = require('../../../src/config')
+const AppHelpers = require('../../../src/helpers/app-helper');
+const Config = require('../../../src/config');
 
 describe('App Helpers', () => {
-  const text = 'some-text'
-  const salt = 'kosher-salt'
-  const encrypted = '17f4faa5c532708c8f'
+  const text = 'some-text';
+  const salt = 'kosher-salt';
+  const encrypted = '18f4faa5c532708c8f';
+  const processedSalt = 'c2cd22c1a8133704f09fc8a218088b1b';
+  const encryptedPasswordLine = '17f4faa5c532708c8f:18f4faa5c532708c8f';
 
-  def('subject', () => AppHelpers)
-  def('sandbox', () => sinon.createSandbox())
+  def('subject', () => AppHelpers);
+  def('sandbox', () => sinon.createSandbox());
   def('cipher', () => ({
     update: $sandbox.stub().returns(''),
     final: $sandbox.stub().returns(encrypted)
-  }))
+  }));
   def('decipher', () => ({
     update: $sandbox.stub().returns(''),
     final: $sandbox.stub().returns(text)
-  }))
+  }));
 
-  afterEach(() => $sandbox.restore())
+  afterEach(() => $sandbox.restore());
 
   describe('.encryptText()', () => {
-    def('subject', () => $subject.encryptText(text, salt))
+    def('subject', () => $subject.encryptText(text, salt));
+    def('iv', () => '17f4faa5c532708c8f');
 
     beforeEach(() => {
-      $sandbox.stub(crypto, 'createCipher').returns($cipher)
-    })
+      $sandbox.stub(crypto, 'randomBytes').returns($iv);
+      $sandbox.stub(crypto, 'createCipheriv').returns($cipher);
+    });
 
-    it('calls crypto#createCipher() with correct args', () => {
+    it('calls crypto#createCipheriv() with correct args', () => {
       $subject
-      expect(crypto.createCipher).to.have.been.calledWith('aes-256-ctr', salt)
-    })
+      expect(crypto.createCipheriv).to.have.been.calledWith('aes-256-ctr', processedSalt, $iv)
+    });
 
     it('calls crypto.cipher#update() with correct args', () => {
       $subject
       expect($cipher.update).to.have.been.calledWith(text, 'utf8', 'hex')
-    })
+    });
 
     it('calls crypto.cipher#final() with correct args', () => {
       $subject
       expect($cipher.final).to.have.been.calledWith('hex')
-    })
+    });
 
     it('returns the encrypted text', () => {
-      expect($subject).to.equal(encrypted)
+      expect($subject).to.equal(encryptedPasswordLine)
     })
-  })
+  });
 
   describe('.decryptText()', () => {
-    def('subject', () => $subject.decryptText(encrypted, salt))
+    def('iv', () => '17f4faa5c532708c8f');
+    def('subject', () => $subject.decryptText(encryptedPasswordLine, salt));
 
     beforeEach(() => {
-      $sandbox.stub(crypto, 'createDecipher').returns($decipher)
-    })
-
-    it('calls crypto#createDecipher() with correct args', () => {
-      $subject
-      expect(crypto.createDecipher).to.have.been.calledWith('aes-256-ctr', salt)
-    })
-
-    it('calls crypto.decipher#update() with correct args', () => {
-      $subject
-      expect($decipher.update).to.have.been.calledWith(encrypted, 'hex', 'utf8')
-    })
+      $sandbox.stub(crypto, 'createDecipheriv').returns($decipher);
+    });
 
     it('calls crypto.decipher#final() with correct args', () => {
       $subject
       expect($decipher.final).to.have.been.calledWith('utf8')
-    })
+    });
 
     it('returns the decrypted text', () => {
       expect($subject).to.equal(text)
     })
-  })
+  });
 
   describe('.generateRandomString()', () => {
-    def('size', () => 12)
+    def('size', () => 12);
 
     context('when size is greater than zero', () => {
       it('returns a random string with length of size', () => {
         expect(AppHelpers.generateRandomString($size)).to.have.lengthOf($size)
       })
-    })
+    });
 
     context('when size is zero', () => {
       def('size', () => 0)
@@ -284,19 +279,111 @@ describe('App Helpers', () => {
     })
   })
 
-  // TODO:
-  // generateAccessToken
-  // checkTransaction
-  // deleteUndefinedFields
-  // validateBooleanCliOptions
-  // formatMessage
-  // stringifyCliJsonSchema
-  // handleCLIError
-  // trimCertificate
-  // validateParameters
-  // _validateArg
-  // _getPossibleAliasesList
-  // _getPossibleArgsList
-  // isTest
+  describe('.deleteUndefinedFields()', () => {
+    const input = {
+      name: undefined,
+      id: undefined,
+      ioFogUuid: 'testIoFogUuid',
+      location: 'testLocation'
+    };
 
-})
+    const output = {
+      ioFogUuid: 'testIoFogUuid',
+      location: 'testLocation'
+    };
+
+    def('subject', () => $subject.deleteUndefinedFields(input));
+
+    context('passing input object', () => {
+      it('returns output without undefined values', () => {
+        expect($subject).to.be.deep.equal(output);
+      })
+    });
+  });
+
+  describe('.validateBooleanCliOptions()', () => {
+    def('trueOption', () => 'testOption');
+    def('falseOption', () => 'testOption2');
+    def('subject', () => $subject.validateBooleanCliOptions($trueOption, $falseOption));
+
+    context('when true option is true and false option is false', () => {
+      def('trueOption', () => 'testOption');
+      def('falseOption', () => undefined);
+
+      it('returns true', () => {
+        expect($subject).to.be.equal(true);
+      })
+    });
+
+    context('when true option is false and false option is true', () => {
+      def('trueOption', () => undefined);
+      def('falseOption', () => 'testOption');
+
+      it('returns false', () => {
+        expect($subject).to.be.equal(false);
+      })
+    });
+  });
+
+  describe('.formatMessage()', () => {
+    def('input', () => 'testOption {}');
+    def('argument', () => 'test');
+    def('output', () => 'testOption test');
+    def('subject', () => $subject.formatMessage($input, $argument));
+
+    context('when input and argument passed', () => {
+      it('returns output with argument', () => {
+        expect($subject).to.be.equal($output);
+      })
+    });
+  });
+
+  describe('.stringifyCliJsonSchema()', () => {
+    def('json', () => ({
+      id: 15,
+      name: 'testName'
+    }));
+    def('output', () => '\\{\n  "id": 15,\n  "name": "testName"\n\\}');
+    def('subject', () => $subject.stringifyCliJsonSchema($json));
+
+    context('when json passed', () => {
+      it('returns json as formatted string', () => {
+        expect($subject).to.be.equal($output);
+      })
+    });
+
+  });
+
+  describe('.handleCLIError()', () => {
+    def('error', () => ({
+      id: 15,
+      name: 'UNKNOWN_OPTION',
+      optionName: 'testOption',
+      value: 'testValue',
+      message: 'Test error occurred'
+    }));
+    def('errorMessage', () => "Unknown parameter " + $error.optionName);
+    def('subject', () => $subject.handleCLIError($error));
+
+    context('when error received', () => {
+      it('displays error message', () => {
+        expect($subject).to.be.equal(undefined);
+      })
+    });
+
+  });
+
+  describe('.trimCertificate()', () => {
+    def('certificate', () => '-----BEGIN CERTIFICATE-----\n' +
+      'testttt' +
+      '-----END CERTIFICATE-----');
+    def('output', () => 'testttt');
+    def('subject', () => $subject.trimCertificate($certificate));
+
+    context('when called with certificate', () => {
+      it('returns trimmed certificate', () => {
+        expect($subject).to.be.equal($output);
+      })
+    });
+  });
+});

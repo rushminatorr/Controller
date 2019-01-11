@@ -22,6 +22,19 @@ const agentProvision = {
   "additionalProperties": false
 };
 
+const agentDeprovision = {
+  "id": "/agentDeprovision",
+  "type": "object",
+  "properties": {
+    "microserviceUuids": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "required": ["microserviceUuids"],
+  "additionalProperties": false
+};
+
 const updateAgentConfig = {
   "id": "/updateAgentConfig",
   "type": "object",
@@ -42,15 +55,6 @@ const updateAgentConfig = {
     "latitude": {"type": "number", "minimum": -90, "maximum": 90},
     "longitude": {"type": "number", "minimum": -180, "maximum": 180},
     "gpsMode": {"type": "string"}
-  },
-  "additionalProperties": false
-};
-
-const agentConfigChanges = {
-  "id": "/agentConfigChanges",
-  "type": "object",
-  "properties": {
-    "timestamp": {"type": "integer"}
   },
   "additionalProperties": false
 };
@@ -104,10 +108,10 @@ const straceData = {
   "id": "/straceData",
   "type": "object",
   "properties": {
-    "microserviceId": {"type": "string"},
+    "microserviceUuid": {"type": "string"},
     "buffer": {"type": "string"}
   },
-  "required": ["microserviceId", "buffer"],
+  "required": ["microserviceUuid", "buffer"],
   "additionalProperties": false
 };
 
@@ -148,7 +152,7 @@ const updateUsbInfo = {
 };
 
 module.exports = {
-  mainSchemas: [agentProvision, updateAgentConfig, agentConfigChanges, updateAgentStatus, updateAgentStrace,
+  mainSchemas: [agentProvision, agentDeprovision, updateAgentConfig, updateAgentStatus, updateAgentStrace,
   updateHardwareInfo, updateUsbInfo],
   innerSchemas: [straceData, microserviceStatus]
 };

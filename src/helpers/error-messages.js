@@ -23,9 +23,11 @@ module.exports = {
   INVALID_FOG_NODE_UUID: 'Invalid ioFog UUID {}',
   INVALID_USER_EMAIL: 'Invalid user email',
   INVALID_MICROSERVICE_UUID: "Invalid microservice UUID '{}'",
+  INVALID_MICROSERVICE_STRACE: "Strace data for this microservice not found",
   INVALID_VOLUME_MAPPING_UUID: "Invalid volume mapping id '{}'",
   ACTIVATION_CODE_NOT_FOUND: 'Activation code not found',
   INVALID_OLD_PASSWORD: 'Old password is incorrect',
+  NEEDED_FORCE_DELETE_USER: "There are running iofog-agents, stop them before removal or pass 'force' parameter",
   ACCOUNT_NOT_FOUND: 'Account not found',
   USER_NOT_UPDATED: 'User not updated',
   EMAIL_NOT_ACTIVATED: 'Email is not activated. Please activate your account first.',
@@ -69,5 +71,9 @@ module.exports = {
     INVALID_VOLUME_MAPPING: 'Volume mapping parsing error. Please provide valid volume mapping.',
     INVALID_INTERNAL_PORT: 'Internal parsing error. Please provide valid internal port.',
     INVALID_ROUTE: 'Route parsing error. Please provide valid route.'
-  }
+  },
+  CONNECTOR_IS_IN_USE: 'You can\'t delete connector, because it is used for routing now.',
+  INVALID_VERSION_COMMAND_UPGRADE: 'Can\'t upgrade version now. Latest is already installed',
+  INVALID_VERSION_COMMAND_ROLLBACK: 'Can\'t rollback version now. There are no backups on agent',
+  CATALOG_ITEM_IMAGES_IS_FROZEN: 'Can\'t update catalog item images for item used for running microservices'
 };

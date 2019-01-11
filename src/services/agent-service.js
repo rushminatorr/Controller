@@ -14,7 +14,6 @@
 const TransactionDecorator = require('../decorators/transaction-decorator');
 
 const FogProvisionKeyManager = require('../sequelize/managers/iofog-provision-key-manager');
-const FogTypeManager = require('../sequelize/managers/iofog-type-manager');
 const FogManager = require('../sequelize/managers/iofog-manager');
 const FogAccessTokenService = require('../services/iofog-access-token-service');
 const ChangeTrackingService = require('./change-tracking-service');
@@ -22,6 +21,8 @@ const FogVersionCommandManager = require('../sequelize/managers/iofog-version-co
 const StraceManager = require('../sequelize/managers/strace-manager');
 const RegistryManager = require('../sequelize/managers/registry-manager');
 const MicroserviceStatusManager = require('../sequelize/managers/microservice-status-manager')
+const MicroserviceStates = require('../enums/microservice-state');
+const FogStates = require('../enums/fog-state');
 const Validator = require('../schemas');
 const Errors = require('../helpers/errors');
 const AppHelper = require('../helpers/app-helper');
@@ -35,13 +36,13 @@ const ConnectorManager = require('../sequelize/managers/connector-manager');
 const path = require('path');
 const fs = require('fs');
 const formidable = require('formidable');
-const logger = require('../logger');
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 const _ = require('underscore');
 
-const agentProvision = async function (provisionData, transaction) {
+const IncomingForm = formidable.IncomingForm;
 
+const agentProvision = async function (provisionData, transaction) {
   await Validator.validate(provisionData, Validator.schemas.agentProvision);
 
   const provision = await FogProvisionKeyManager.findOne({
@@ -81,6 +82,28 @@ const agentProvision = async function (provisionData, transaction) {
     token: newAccessToken.token
   };
 
+};
+
+const agentDeprovision = async function (deprovisionData, fog, transaction) {
+  await Validator.validate(deprovisionData, Validator.schemas.agentDeprovision);
+
+  await MicroserviceStatusManager.update(
+    {microserviceUuid: deprovisionData.microserviceUuids},
+    {status: MicroserviceStates.NOT_RUNNING},
+    transaction
+  );
+
+  await _invalidateFogNode(fog, transaction);
+};
+
+const _invalidateFogNode = async function (fog, transaction) {
+  const where = {uuid: fog.uuid};
+  const data = {daemonStatus: FogStates.UNKNOWN, ipAddress: '0.0.0.0'};
+  await FogManager.update(where, data, transaction);
+  const updatedFog = Object.assign({}, fog);
+  updatedFog.daemonStatus = FogStates.UNKNOWN;
+  updatedFog.ipAddress = '0.0.0.0';
+  return updatedFog;
 };
 
 const getAgentConfig = async function (fog) {
@@ -133,7 +156,7 @@ const updateAgentConfig = async function (updateData, fog, transaction) {
 
 const getAgentConfigChanges = async function (fog, transaction) {
 
-  const changeTracking = await ChangeTrackingService.getByFogId(fog.uuid, transaction);
+  const changeTracking = await ChangeTrackingService.getByIoFogUuid(fog.uuid, transaction);
   if (!changeTracking) {
     throw new Errors.NotFoundError(ErrorMessages.INVALID_NODE_ID)
   }
@@ -190,7 +213,7 @@ const updateAgentStatus = async function (agentStatus, fog, transaction) {
   }, fogStatus, transaction);
 
   await _updateMicroserviceStatuses(JSON.parse(agentStatus.microserviceStatus), transaction);
-  await MicroserviceService.deleteNotRunningMicroservices(transaction);
+  await MicroserviceService.deleteNotRunningMicroservices(fog, transaction);
 };
 
 
@@ -390,7 +413,7 @@ const getAgentTunnel = async function (fog, transaction) {
 };
 
 const getAgentStrace = async function (fog, transaction) {
-  const fogWithStrace = FogManager.findFogStraces({
+  const fogWithStrace = await FogManager.findFogStraces({
     uuid: fog.uuid
   }, transaction);
 
@@ -398,18 +421,27 @@ const getAgentStrace = async function (fog, transaction) {
     throw new Errors.NotFoundError(ErrorMessages.STRACE_NOT_FOUND);
   }
 
-  return fogWithStrace.strace;
+  const straceArr = [];
+  for (const msData of fogWithStrace.microservice) {
+    straceArr.push({
+      microserviceUuid: msData.strace.microserviceUuid,
+      straceRun: msData.strace.straceRun
+    })
+  }
+
+  return {
+    straceValues: straceArr
+  }
 };
 
 const updateAgentStrace = async function (straceData, fog, transaction) {
   await Validator.validate(straceData, Validator.schemas.updateAgentStrace);
 
   for (const strace of straceData.straceData) {
-    const microserviceId = strace.microserviceId;
+    const microserviceUuid = strace.microserviceUuid;
     const buffer = strace.buffer;
-    await StraceManager.pushBufferByMicroserviceId(microserviceId, buffer, transaction)
+    await StraceManager.pushBufferByMicroserviceUuid(microserviceUuid, buffer, transaction)
   }
-
 };
 
 const getAgentChangeVersionCommand = async function (fog, transaction) {
@@ -420,13 +452,13 @@ const getAgentChangeVersionCommand = async function (fog, transaction) {
     throw new Errors.NotFoundError(ErrorMessages.VERSION_COMMAND_NOT_FOUND);
   }
 
-  const provision = FogProvisionKeyManager.findOne({
+  const provision = await FogProvisionKeyManager.findOne({
     iofogUuid: fog.uuid
   }, transaction);
 
   return {
     versionCommand: versionCommand.versionCommand,
-    provisionKey: provision.key,
+    provisionKey: provision.provisionKey,
     expirationTime: provision.expirationTime
   }
 };
@@ -480,16 +512,16 @@ const putImageSnapshot = async function (req, fog, transaction) {
     throw new Errors.ValidationError(ErrorMessages.INVALID_CONTENT_TYPE);
   }
 
-  const form = new formidable.IncomingForm(opts);
+  const form = new IncomingForm(opts);
   form.uploadDir = path.join(appRoot, '../') + 'data';
   if (!fs.existsSync(form.uploadDir)) {
     fs.mkdirSync(form.uploadDir);
   }
-  await saveSnapShot(req, form, fog, transaction);
+  await _saveSnapShot(req, form, fog, transaction);
   return {};
 };
 
-const saveSnapShot = function (req, form, fog, transaction) {
+const _saveSnapShot = function (req, form, fog, transaction) {
   return new Promise((resolve, reject) => {
     form.parse(req, async function (error, fields, files) {
       const file = files['upstream'];
@@ -551,6 +583,7 @@ async function _checkMicroservicesFogType(fog, fogTypeId, transaction) {
 
 module.exports = {
   agentProvision: TransactionDecorator.generateFakeTransaction(agentProvision),
+  agentDeprovision: TransactionDecorator.generateFakeTransaction(agentDeprovision),
   getAgentConfig: getAgentConfig,
   updateAgentConfig: TransactionDecorator.generateFakeTransaction(updateAgentConfig),
   getAgentConfigChanges: TransactionDecorator.generateFakeTransaction(getAgentConfigChanges),
