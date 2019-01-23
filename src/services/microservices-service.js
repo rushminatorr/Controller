@@ -19,10 +19,11 @@ const MicroservicePortManager = require('../sequelize/managers/microservice-port
 const MicroserviceStates = require('../enums/microservice-state');
 const VolumeMappingManager = require('../sequelize/managers/volume-mapping-manager');
 const ConnectorManager = require('../sequelize/managers/connector-manager');
-const ConnectorPortManager = require('../sequelize/managers/connector-port-manager');
+const ConnectorPublicSessionManager = require('../sequelize/managers/connector-public-session-manager');
+const ConnectorPrivateSessionManager = require('../sequelize/managers/connector-private-session-manager');
 const MicroservicePublicModeManager = require('../sequelize/managers/microservice-public-mode-manager');
 const ChangeTrackingService = require('./change-tracking-service');
-const ConnectorPortService = require('./connector-port-service');
+const ConnectorSessionService = require('./connector-session-service');
 const IoFogService = require('../services/iofog-service');
 const AppHelper = require('../helpers/app-helper');
 const Errors = require('../helpers/errors');
@@ -635,82 +636,23 @@ async function _updateNetworkMicroserviceConfigs(networkMicroserviceUuids, conne
 
 async function _createRouteOverConnector(sourceMicroservice, destMicroservice, user, transaction) {
 
-  const topicName = "pubsub.iofog." + sourceMicroservice.uuid;
-  const data = await ConnectorService.createTopicOnRandomConnector(topicName, false, transaction)
+  const connectorSession = await ConnectorSessionService.openSessionOnRandomConnector(false, sourceMicroservice.uuid, transaction);
+  const privateSession = connectorSession.session;
+  const connector = connectorSession.connector;
 
-  const passKey = data.passKey;
-  const connector = data.connector;
-
-  const createConnectorPortData = {
-    passcodePort1: passKey,
+  const connectorPrivateSessionData = {
+    publisherId: privateSession.publisherId,
+    passKey: privateSession.passKey,
     connectorId: connector.id
   };
 
-  const connectorPort = await ConnectorPortManager.create(createConnectorPortData, transaction);
-  // const createConnectorPortData = {
-  //   port1: ports.port1,
-  //   port2: ports.port2,
-  //   maxConnectionsPort1: 1,
-  //   maxConnectionsPort2: 1,
-  //   passcodePort1: ports.passcode1,
-  //   passcodePort2: ports.passcode2,
-  //   heartBeatAbsenceThresholdPort1: 60000,
-  //   heartBeatAbsenceThresholdPort2: 60000,
-  //   connectorId: ports.connectorId,
-  //   mappingId: ports.id
-  // };
-  // const connectorPort = await ConnectorPortManager.create(createConnectorPortData, transaction)
-  //
-  // const networkCatalogItem = await CatalogService.getNetworkCatalogItem(transaction)
+  const connectorPrivateSession = await ConnectorPrivateSessionManager.create(connectorPrivateSessionData, transaction);
 
-  let cert;
-  if (!connector.devMode && connector.cert) {
-    cert = AppHelper.trimCertificate(fs.readFileSync(connector.cert, "utf-8"))
-  }
-
-  //create netw ms1
-  // const sourceNetwMsConfig = {
-  //   'mode': 'private',
-  //   'host': connector.domain,
-  //   'cert': cert,
-  //   'port': ports.port1,
-  //   'passcode': ports.passcode1,
-  //   'connectioncount': 1,
-  //   'localhost': 'iofog',
-  //   'localport': 0,
-  //   'heartbeatfrequency': 20000,
-  //   'heartbeatabsencethreshold': 60000,
-  //   'devmode': connector.devMode
+  // let cert;
+  // if (!connector.devMode && connector.cert) {
+  //   cert = AppHelper.trimCertificate(fs.readFileSync(connector.cert, "utf-8"))
   // }
-  // const sourceNetworkMicroservice = await _createNetworkMicroserviceForMaster(
-  //   sourceMicroservice,
-  //   sourceNetwMsConfig,
-  //   networkCatalogItem,
-  //   user,
-  //   transaction
-  // );
 
-  //create netw ms2
-  // const destNetwMsConfig = {
-  //   'mode': 'private',
-  //   'host': connector.domain,
-  //   'cert': cert,
-  //   'port': ports.port2,
-  //   'passcode': ports.passcode2,
-  //   'connectioncount': 1,
-  //   'localhost': 'iofog',
-  //   'localport': 0,
-  //   'heartbeatfrequency': 20000,
-  //   'heartbeatabsencethreshold': 60000,
-  //   'devmode': connector.devMode
-  // }
-  // const destNetworkMicroservice = await _createNetworkMicroserviceForMaster(
-  //   destMicroservice,
-  //   destNetwMsConfig,
-  //   networkCatalogItem,
-  //   user,
-  //   transaction
-  // );
 
   //create new route
   const routeData = {
@@ -719,11 +661,7 @@ async function _createRouteOverConnector(sourceMicroservice, destMicroservice, u
     destMicroserviceUuid: destMicroservice.uuid,
     sourceIofogUuid: sourceMicroservice.iofogUuid,
     destIofogUuid: destMicroservice.iofogUuid,
-    // sourceNetworkMicroserviceUuid: sourceNetworkMicroservice.uuid,
-    // destNetworkMicroserviceUuid: destNetworkMicroservice.uuid,
-    sourceNetworkMicroserviceUuid: null,
-    destNetworkMicroserviceUuid: null,
-    connectorPortId: connectorPort.id
+    connectorPrivateSessionId: connectorPrivateSession.id
   };
   await RoutingManager.create(routeData, transaction);
 
@@ -767,22 +705,28 @@ async function _deleteSimpleRoute(route, transaction) {
 }
 
 async function _deleteRouteOverConnector(route, transaction) {
-  const ports = await ConnectorPortManager.findOne({id: route.connectorPortId}, transaction);
-  const connector = await ConnectorManager.findOne({id: ports.connectorId}, transaction);
+  const privateSession = await ConnectorPrivateSessionManager.findOne({id: route.connectorPrivateSessionId}, transaction);
+  const connector = await ConnectorManager.findOne({id: privateSession.connectorId}, transaction);
 
-  try {
-    await ConnectorPortService.closePortOnConnector(connector, ports);
-  } catch (e) {
-    logger.warn(`Can't close ports pair ${ports.mappingId} on connector ${connector.publicIp}. Delete manually if necessary`);
+  const where = {
+    id: {[Op.ne]: privateSession.id},
+    publisherId: privateSession.publisherId
+  };
+
+  const otherPublisherPrivateSessions = await ConnectorPrivateSessionManager.findAll(where, transaction);
+  if (otherPublisherPrivateSessions.length === 0) {
+    try {
+      await ConnectorSessionService.closeSessionOnConnector(connector, false, privateSession.publisherId);
+    } catch (e) {
+      logger.warn(`Can't close private session ${privateSession.publisherId} on connector ${connector.name}. Delete manually if necessary`);
+    }
   }
 
   await RoutingManager.delete({id: route.id}, transaction);
-  await ConnectorPortManager.delete({id: ports.id}, transaction);
-  await MicroserviceManager.delete({uuid: route.sourceNetworkMicroserviceUuid}, transaction);
-  await MicroserviceManager.delete({uuid: route.destNetworkMicroserviceUuid}, transaction);
+  await ConnectorPrivateSessionManager.delete({id: privateSession.id}, transaction);
 
-  await ChangeTrackingService.update(route.sourceIofogUuid, ChangeTrackingService.events.microserviceFull, transaction);
-  await ChangeTrackingService.update(route.destIofogUuid, ChangeTrackingService.events.microserviceFull, transaction);
+  await ChangeTrackingService.update(route.sourceIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction);
+  await ChangeTrackingService.update(route.destIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction);
 }
 
 async function _createSimplePortMapping(microservice, portMappingData, user, transaction) {
@@ -801,24 +745,24 @@ async function _createSimplePortMapping(microservice, portMappingData, user, tra
 
 async function _createPortMappingOverConnector(microservice, portMappingData, user, transaction) {
   //open connector
-  const justOpenedConnectorsPorts = await ConnectorPortService.openPortOnRandomConnector(true, transaction);
+  const connectorSession = await ConnectorSessionService.openSessionOnRandomConnector(
+    true,
+    microservice.uuid,
+    transaction
+  );
 
-  const ports = justOpenedConnectorsPorts.ports;
-  const connector = justOpenedConnectorsPorts.connector;
+  const session = connectorSession.session;
+  const connector = connectorSession.connector;
 
-  const createConnectorPortData = {
-    port1: ports.port1,
-    port2: ports.port2,
-    maxConnectionsPort1: 1,
-    maxConnectionsPort2: 60,
-    passcodePort1: ports.passcode1,
-    passcodePort2: ports.passcode2,
-    heartBeatAbsenceThresholdPort1: 60000,
-    heartBeatAbsenceThresholdPort2: 0,
-    connectorId: ports.connectorId,
-    mappingId: ports.id
+  const connectorPublicSessionData = {
+    publisherId: session.publisherId,
+    passKey: session.passKey,
+    privatePort: session.privatePort,
+    publicPort: session.publicPort,
+    maxConnections: session.maxConnections
   };
-  const connectorPort = await ConnectorPortManager.create(createConnectorPortData, transaction);
+
+  const connectorPublicSession = await ConnectorPublicSessionManager.create(connectorPublicSessionData, transaction);
 
   const networkCatalogItem = await CatalogService.getNetworkCatalogItem(transaction);
 
@@ -831,8 +775,8 @@ async function _createPortMappingOverConnector(microservice, portMappingData, us
     'mode': 'public',
     'host': connector.domain,
     'cert': cert,
-    'port': ports.port1,
-    'passcode': ports.passcode1,
+    'port': session.privatePort,
+    'passcode': session.passKey,
     'connectioncount': 60,
     'localhost': 'iofog',
     'localport': portMappingData.external,
@@ -864,13 +808,13 @@ async function _createPortMappingOverConnector(microservice, portMappingData, us
     networkMicroserviceUuid: networkMicroservice.uuid,
     iofogUuid: microservice.iofogUuid,
     microservicePortId: msPortMapping.id,
-    connectorPortId: connectorPort.id
+    connectorPublicSessionId: connectorPublicSession.id
   };
   await MicroservicePublicModeManager.create(msPubModeData, transaction);
 
 
   await _switchOnUpdateFlagsForMicroservicesForPortMapping(microservice, true, transaction);
-  const publicLink = await _buildLink(connector.devMode ? 'http' : 'https', connector.publicIp, connectorPort.port2)
+  const publicLink = await _buildLink(connector.devMode ? 'http' : 'https', connector.publicIp, connectorPublicSession.publicPort)
   return {publicLink: publicLink}
 }
 
@@ -901,17 +845,17 @@ async function _deleteSimplePortMapping(microservice, msPorts, user, transaction
 async function _deletePortMappingOverConnector(microservice, msPorts, user, transaction) {
   const pubModeData = await MicroservicePublicModeManager.findOne({microservicePortId: msPorts.id}, transaction);
 
-  const ports = await ConnectorPortManager.findOne({id: pubModeData.connectorPortId}, transaction);
-  const connector = await ConnectorManager.findOne({id: ports.connectorId}, transaction);
+  const publicSession = ConnectorPublicSessionManager.findOne({id: pubModeData.connectorPublicSessionId}, transaction);
+  const connector = await ConnectorManager.findOne({id: publicSession.connectorId}, transaction);
 
   try {
-    await ConnectorPortService.closePortOnConnector(connector, ports);
+    await ConnectorSessionService.closeSessionOnConnector(connector, true, publicSession.publisherId);
   } catch (e) {
-    logger.warn(`Can't close ports pair ${ports.mappingId} on connector ${connector.publicIp}. Delete manually if necessary`);
+    logger.warn(`Can't close public session ${publicSession.publisherId} on connector ${connector.publicIp}. Delete manually if necessary`);
   }
   await MicroservicePublicModeManager.delete({id: pubModeData.id}, transaction);
   await MicroservicePortManager.delete({id: msPorts.id}, transaction);
-  await ConnectorPortManager.delete({id: ports.id}, transaction);
+  await ConnectorPublicSessionManager.delete({id: publicSession.id}, transaction);
   await MicroserviceManager.delete({uuid: pubModeData.networkMicroserviceUuid}, transaction);
 
   const updateRebuildMs = {
@@ -942,10 +886,14 @@ async function _buildPortsList(portsPairs, transaction) {
     };
     if (ports.isPublic) {
       const pubMode = await MicroservicePublicModeManager.findOne({microservicePortId: ports.id}, transaction);
-      const connectorPorts = await ConnectorPortManager.findOne({id: pubMode.connectorPortId}, transaction);
-      const connector = await ConnectorManager.findOne({id: connectorPorts.connectorId}, transaction);
+      const connectorPublicSession = await ConnectorPublicSessionManager.findOne({id: pubMode.connectorPublicSessionId}, transaction);
+      const connector = await ConnectorManager.findOne({id: connectorPublicSession.connectorId}, transaction);
 
-      portMappingResposeData.publicLink = await _buildLink(connector.devMode ? 'http' : 'https', connector.publicIp, connectorPorts.port2)
+      portMappingResposeData.publicLink = await _buildLink(
+        connector.devMode
+        ? 'http'
+        : 'https', connector.publicIp, connectorPublicSession.publicPort
+      )
     }
     res.push(portMappingResposeData)
   }
@@ -961,7 +909,7 @@ async function _listPortMappings(microserviceUuid, user, isCLI, transaction) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
   }
 
-  const portsPairs = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction)
+  const portsPairs = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction);
   return await _buildPortsList(portsPairs, transaction)
 }
 
@@ -1018,7 +966,7 @@ async function _getLogicalNetworkRoutesByFog(iofogUuid, transaction) {
         }
       ]
   };
-  const routes = await RoutingManager.findAll(query, transaction)
+  const routes = await RoutingManager.findAll(query, transaction);
   for (let route of routes) {
     if (route.sourceIofogUuid && route.destIofogUuid && route.isNetworkConnection) {
       res.push(route);

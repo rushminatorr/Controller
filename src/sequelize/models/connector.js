@@ -26,11 +26,30 @@ module.exports = (sequelize, DataTypes) => {
     },
     isSelfSignedCert: {
       type: DataTypes.BOOLEAN,
-      field: 'self_signed_certs'
+      field: 'self_signed_cert',
+      defaultValue: false
     },
     devMode: {
       type: DataTypes.BOOLEAN,
-      field: 'dev_mode'
+      field: 'dev_mode',
+      defaultValue: false
+    },
+    port: {
+      type: DataTypes.INTEGER,
+      field: 'port',
+      defaultValue: 61616
+    },
+    user: {
+      type: DataTypes.TEXT,
+      field: 'user'
+    },
+    userPassword: {
+      type: DataTypes.TEXT,
+      field: 'user_password'
+    },
+    keystorePassword: {
+      type: DataTypes.TEXT,
+      field: 'keystore_password'
     }
   }, {
     timestamps: true,

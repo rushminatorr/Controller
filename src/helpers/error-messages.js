@@ -18,6 +18,7 @@ module.exports = {
   INVALID_FLOW_ID: 'Invalid flow id {}',
   INVALID_REGISTRY_ID: 'Invalid registry id {}',
   INVALID_CONNECTOR_IP: 'Invalid connector IP {}',
+  INVALID_CONNECTOR_NAME: 'Invalid connector name {}',
   UNABLE_TO_CREATE_ACTIVATION_CODE: 'Unable to create activation code',
   UNABLE_TO_GET_ACTIVATION_CODE: 'Unable to create activation code',
   INVALID_FOG_NODE_UUID: 'Invalid ioFog UUID {}',

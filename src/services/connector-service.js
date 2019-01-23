@@ -19,7 +19,8 @@ const ErrorMessages = require('../helpers/error-messages');
 const AppHelper = require('../helpers/app-helper');
 const Op = require('sequelize').Op;
 
-const ConnectorPortManager = require('../sequelize/managers/connector-port-manager');
+const ConnectorPublicSessionManager = require('../sequelize/managers/connector-public-session-manager');
+const ConnectorPrivateSessionManager = require('../sequelize/managers/connector-private-session-manager');
 const MicroserviceService = require('../services/microservices-service');
 
 async function createConnector(connectorData, transaction) {
@@ -48,10 +49,10 @@ async function updateConnector(connectorData, transaction) {
   await Validator.validate(connectorData, Validator.schemas.connectorUpdate);
   _validateConnectorData(connectorData);
   const queryConnectorData = {
-    publicIp: connectorData.publicIp
+    name: connectorData.name
   };
   await ConnectorManager.update(queryConnectorData, connectorData, transaction);
-  const connector = await ConnectorManager.findOne({publicIp: connectorData.publicIp}, transaction);
+  const connector = await ConnectorManager.findOne({name: connectorData.name}, transaction);
   await MicroserviceService.updateRouteOverConnector(connector, transaction);
   await MicroserviceService.updatePortMappingOverConnector(connector, transaction);
 }
@@ -59,14 +60,15 @@ async function updateConnector(connectorData, transaction) {
 async function deleteConnector(connectorData, transaction) {
   await Validator.validate(connectorData, Validator.schemas.connectorDelete);
   const queryConnectorData = {
-    publicIp: connectorData.publicIp
+    name: connectorData.name
   };
   const connector = await ConnectorManager.findOne(queryConnectorData, transaction);
   if (!connector) {
-    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_CONNECTOR_IP, connectorData.publicIp))
+    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_CONNECTOR_NAME, connectorData.name))
   }
-  const ports = await ConnectorPortManager.findAll({connectorId: connector.id}, transaction);
-  if (ports && ports.length > 0) {
+  const publicSessions = await ConnectorPublicSessionManager.findAll({connectorId: connector.id}, transaction);
+  const privateSessions = await ConnectorPrivateSessionManager.findAll({connectorId: connector.id}, transaction);
+  if (publicSessions > 0 || privateSessions > 0) {
     throw new Errors.ValidationError(ErrorMessages.CONNECTOR_IS_IN_USE)
   }
   await ConnectorManager.delete(queryConnectorData, transaction);

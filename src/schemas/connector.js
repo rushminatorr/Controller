@@ -20,9 +20,13 @@ const connectorCreate = {
     "publicIp": {"type": "string", "minLength": 7},
     "cert": {"type": "string"},
     "isSelfSignedCert": {"type": "boolean"},
-    "devMode": {"type": "boolean"}
+    "devMode": {"type": "boolean"},
+    "keystorePassword": {"type": "string"},
+    "port": {"type": "integer"},
+    "user": {"type": "string"},
+    "userPassword": {"type": "string"}
   },
-  "required": ["publicIp", "name", "devMode"],
+  "required": ["publicIp", "name", "port", "user", "userPassword"],
   "additionalProperties": false
 };
 
@@ -35,9 +39,13 @@ const connectorUpdate = {
     "publicIp": {"type": "string", "minLength": 7},
     "cert": {"type": "string"},
     "isSelfSignedCert": {"type": "boolean"},
-    "devMode": {"type": "boolean"}
+    "devMode": {"type": "boolean"},
+    "keystorePassword": {"type": "string"},
+    "port": {"type": "integer"},
+    "user": {"type": "string"},
+    "userPassword": {"type": "string"}
   },
-  "required": ["publicIp"],
+  "required": ["name"],
   "additionalProperties": false
 };
 
@@ -45,9 +53,9 @@ const connectorDelete = {
   "id": "/connectorDelete",
   "type": "object",
   "properties": {
-    "publicIp": {"type": "string", "minLength": 7}
+    "name": {"type": "string", "minLength": 1}
   },
-  "required": ["publicIp"],
+  "required": ["name"],
   "additionalProperties": false
 };
 

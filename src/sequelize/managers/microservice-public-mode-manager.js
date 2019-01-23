@@ -11,10 +11,10 @@
  *  
  */
 
-const BaseManager = require('../managers/base-manager')
+const BaseManager = require('../managers/base-manager');
 const models = require('./../models');
 const MicroservicePublicMode = models.MicroservicePublicMode;
-const ConnectorPort = models.ConnectorPort;
+const ConnectorPublicSession = models.ConnectorPublicSession;
 
 class MicroservicePublicModeManager extends BaseManager {
   getEntity() {
@@ -25,17 +25,17 @@ class MicroservicePublicModeManager extends BaseManager {
     return MicroservicePublicMode.findAll({
       include: [
         {
-          model: ConnectorPort,
-          as: 'connectorPort',
+          model: ConnectorPublicSession,
+          as: 'connectorPublicSession',
           required: true
         }
       ],
       where: {
-        '$connectorPort.connector_id$': connectorId
+        '$connectorPublicSession.connector_id$': connectorId
       }
     }, {transaction: transaction})
   }
 }
 
-const instance = new MicroservicePublicModeManager()
-module.exports = instance
+const instance = new MicroservicePublicModeManager();
+module.exports = instance;

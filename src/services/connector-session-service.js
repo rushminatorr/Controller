@@ -15,53 +15,56 @@ const ConnectorManager = require('../sequelize/managers/connector-manager');
 const https = require('https');
 const http = require('http');
 const constants = require('../helpers/constants');
+const connectorMode = require('../enums/connector-access-mode');
 const logger = require('../logger');
-const qs = require('qs');
 const fs = require('fs');
 
-async function openPortOnRandomConnector(isPublicAccess, transaction) {
-  let isConnectorPortOpen = false;
-  let ports = null;
+async function openSessionOnRandomConnector(isPublicAccess, publisherId, transaction) {
+  let isConnectorSessionOpen = false;
+  let session = null;
   let connector = null;
   const maxAttempts = 5;
   for (let i = 0; i < maxAttempts; i++) {
     try {
       connector = await _getRandomConnector(transaction);
-      ports = await _openPortsOnConnector(connector, isPublicAccess);
-      if (ports) {
-        isConnectorPortOpen = true;
+      session = await _openSessionOnConnector(connector, isPublicAccess, publisherId);
+      if (session) {
+        isConnectorSessionOpen = true;
         break;
       }
     } catch (e) {
       logger.warn(`Failed to open ports on Connector. Attempts ${i + 1}/${maxAttempts}`)
     }
   }
-  if (!isConnectorPortOpen) {
+  if (!isConnectorSessionOpen) {
     throw new Error('Not able to open port on remote Connector. Gave up after 5 attempts.')
   }
-  ports.connectorId = connector.id;
-  return {ports: ports, connector: connector}
+  session.connectorId = connector.id;
+  return {session: session, connector: connector}
 }
 
-async function _openPortsOnConnector(connector, isPublicAccess) {
-  let data = isPublicAccess
-    ? await qs.stringify({
-      mapping: '{"type":"public","maxconnections":60,"heartbeatabsencethreshold":200000}'
-    })
-    : await qs.stringify({
-      mapping: '{"type":"private","maxconnectionsport1":1, "maxconnectionsport2":1, ' +
-      '"heartbeatabsencethresholdport1":200000, "heartbeatabsencethresholdport2":200000}'
-    });
+async function _openSessionOnConnector(connector, isPublicAccess, publisherId) {
+  const json = isPublicAccess
+    ? {
+        publisherId: publisherId,
+        routeType: connectorMode.PUBLIC
+      }
+    : {
+        publisherId: publisherId,
+        routeType: connectorMode.PRIVATE
+      };
+
+  const data = JSON.stringify(json);
 
   let port = connector.devMode ? constants.CONNECTOR_HTTP_PORT : constants.CONNECTOR_HTTPS_PORT;
 
   let options = {
     host: connector.domain,
     port: port,
-    path: '/api/v2/mapping/add',
+    path: '/route',
     method: 'POST',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(data)
     }
   };
@@ -70,8 +73,8 @@ async function _openPortsOnConnector(connector, isPublicAccess) {
     options.ca = new Buffer.from(ca);
   }
 
-  const ports = await _makeRequest(connector, options, data);
-  return ports
+  const session = await _makeRequest(connector, options, data);
+  return session
 }
 
 async function _getRandomConnector(transaction) {
@@ -85,23 +88,20 @@ async function _getRandomConnector(transaction) {
   }
 }
 
-async function closePortOnConnector(connector, ports) {
-  let data = qs.stringify({
-    mappingid: ports.mappingId
-  });
-  console.log(data);
-
-  let port = connector.devMode ? constants.CONNECTOR_HTTP_PORT : constants.CONNECTOR_HTTPS_PORT;
+async function closeSessionOnConnector(connector, isPublicAccess, publisherId) {
+  const port = connector.devMode ? constants.CONNECTOR_HTTP_PORT : constants.CONNECTOR_HTTPS_PORT;
+  const mode = isPublicAccess ? connectorMode.PUBLIC : connectorMode.PRIVATE;
+  const path = '/route/' + mode + '/' + publisherId;
 
   let options = {
     host: connector.domain,
     port: port,
-    path: '/api/v2/mapping/remove',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Content-Length': Buffer.byteLength(data)
-    }
+    path: path,
+    method: 'DELETE',
+    // headers: {
+      // 'Content-Type': 'application/json'
+      // 'Content-Length': Buffer.byteLength(0)
+    // }
   };
   if (!connector.devMode && connector.cert && connector.isSelfSignedCert === true) {
     const ca = fs.readFileSync(connector.cert);
@@ -109,13 +109,12 @@ async function closePortOnConnector(connector, ports) {
   }
 
 
-  await _makeRequest(connector, options, data)
+  await _makeRequest(connector, options, '')
 }
 
 async function _makeRequest(connector, options, data) {
   return new Promise((resolve, reject) => {
     let httpreq = (connector.devMode ? http : https).request(options, function (response) {
-      console.log(response.statusCode);
       let output = '';
       response.setEncoding('utf8');
 
@@ -124,8 +123,16 @@ async function _makeRequest(connector, options, data) {
       });
 
       response.on('end', function () {
-        let responseObj = JSON.parse(output);
-        console.log(responseObj);
+        if (response.statusCode === 204) {
+          return resolve();
+        }
+        let responseObj = {};
+        try {
+          responseObj = JSON.parse(output);
+        } catch (e) {
+          logger.warn(e.message);
+        }
+
         if (responseObj.errormessage) {
           return reject(new Error(responseObj.errormessage));
         } else {
@@ -148,6 +155,6 @@ async function _makeRequest(connector, options, data) {
 }
 
 module.exports = {
-  openPortOnRandomConnector: openPortOnRandomConnector,
-  closePortOnConnector: closePortOnConnector
+  openSessionOnRandomConnector: openSessionOnRandomConnector,
+  closeSessionOnConnector: closeSessionOnConnector
 };

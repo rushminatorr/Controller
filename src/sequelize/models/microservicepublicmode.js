@@ -49,12 +49,12 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'set null'
     });
 
-    MicroservicePublicMode.belongsTo(models.ConnectorPort, {
+    MicroservicePublicMode.belongsTo(models.ConnectorPublicSession, {
       foreignKey: {
-        name: 'connectorPortId',
-        field: 'connector_port_id'
+        name: 'ConnectorPublicSessionId',
+        field: 'connector_public_session_id'
       },
-      as: 'connectorPort',
+      as: 'connectorPublicSession',
       onDelete: 'set null'
     });
   };

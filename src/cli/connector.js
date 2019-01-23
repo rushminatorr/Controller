@@ -32,7 +32,7 @@ class Connector extends BaseCLIHandler {
       {
         name: 'name', alias: 'n', type: String,
         description: 'Connector name',
-        group: [constants.CMD_ADD, constants.CMD_UPDATE]
+        group: [constants.CMD_ADD, constants.CMD_UPDATE, constants.CMD_REMOVE]
       },
       {
         name: 'domain', alias: 'd', type: String,
@@ -42,7 +42,7 @@ class Connector extends BaseCLIHandler {
       {
         name: 'public-ip', alias: 'i', type: String,
         description: 'Connector public IP address',
-        group: [constants.CMD_ADD, constants.CMD_UPDATE, constants.CMD_REMOVE]
+        group: [constants.CMD_ADD, constants.CMD_UPDATE]
       },
       {
         name: 'cert', alias: 'c', type: String,
@@ -67,6 +67,26 @@ class Connector extends BaseCLIHandler {
       {
         name: 'dev-mode-off', alias: 'h', type: Boolean,
         description: 'Switch off dev mode',
+        group: [constants.CMD_ADD, constants.CMD_UPDATE]
+      },
+      {
+        name: 'keystore-password', alias: 'k', type: String,
+        description: 'Password for keystore access',
+        group: [constants.CMD_ADD, constants.CMD_UPDATE]
+      },
+      {
+        name: 'port', alias: 'p', type: Number,
+        description: 'Active MQ port',
+        group: [constants.CMD_ADD, constants.CMD_UPDATE]
+      },
+      {
+        name: 'user', alias: 'u', type: String,
+        description: 'Active MQ user',
+        group: [constants.CMD_ADD, constants.CMD_UPDATE]
+      },
+      {
+        name: 'user-password', alias: 'P', type: String,
+        description: 'Acrive MQ user password',
         group: [constants.CMD_ADD, constants.CMD_UPDATE]
       }
     ];
@@ -172,7 +192,11 @@ function _createConnectorObject(cliData) {
     publicIp: cliData.publicIp,
     cert: cliData.cert,
     isSelfSignedCert: AppHelper.validateBooleanCliOptions(cliData.selfSignedOn, cliData.selfSignedOff),
-    devMode: AppHelper.validateBooleanCliOptions(cliData.devModeOn, cliData.devModeOff)
+    devMode: AppHelper.validateBooleanCliOptions(cliData.devModeOn, cliData.devModeOff),
+    keystorePassword: cliData.keystorePassword,
+    port: cliData.port,
+    user: cliData.user,
+    userPassword: cliData.userPassword
   };
 
   return AppHelper.deleteUndefinedFields(connectorObj);

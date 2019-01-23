@@ -326,7 +326,7 @@ const _createRoute = async function (obj, user) {
     logger.info(`Microservice route with source microservice ${sourceMicroserviceId} and dest microservice 
                 ${destMicroserviceId} has been created successfully.`)
   } catch (e) {
-    logger.error(ErrorMessages.CLI.INVALID_ROUTE);
+    logger.error(e.message);
   }
 };
 
@@ -340,7 +340,7 @@ const _removeRoute = async function (obj, user) {
     logger.info(`Microservice route with source microservice ${obj.sourceMicroserviceId} and dest microservice 
                 ${obj.destMicroserviceId} has been removed successfully.`);
   } catch (e) {
-    logger.error(ErrorMessages.CLI.INVALID_ROUTE);
+    logger.error(e.message);
   }
 };
 

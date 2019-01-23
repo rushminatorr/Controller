@@ -25,7 +25,9 @@ const User = models.User;
 const Routing = models.Routing;
 const Registry = models.Registry;
 const MicroserviceStatus = models.MicroserviceStatus;
-const ConnectorPort = models.ConnectorPort;
+const ConnectorPrivateSession = models.ConnectorPrivateSession;
+const ConnectorPublicSession = models.ConnectorPublicSession;
+const MicroservicePublicMode = models.MicroservicePublicMode;
 const Op = require('sequelize').Op;
 
 const microserviceExcludedFields = [
@@ -96,7 +98,7 @@ class MicroserviceManager extends BaseManager {
         }],
         attributes: {exclude: ['id', 'source_microservice_uuid',
             'sourceMicroserviceUuid', 'destMicroserviceUuid', 'sourceNetworkMicroserviceUuid',
-            'destNetworkMicroserviceUuid', 'sourceIofogUuid', 'destIofogUuid', 'connectorPortId']}
+            'destNetworkMicroserviceUuid', 'sourceIofogUuid', 'destIofogUuid', 'connectorPrivateSessionId']}
       }
       ],
       where: where,
@@ -119,10 +121,9 @@ class MicroserviceManager extends BaseManager {
           required: true,
           include: [
             {
-              model: ConnectorPort,
-              as: 'connectorPort',
-              required: true,
-              attributes: ['passcodePort1', 'connectorId']
+              model: ConnectorPrivateSession,
+              as: 'connectorPrivateSession',
+              required: true
             }
           ]
         }
@@ -149,10 +150,38 @@ class MicroserviceManager extends BaseManager {
           required: true,
           include: [
             {
-              model: ConnectorPort,
-              as: 'connectorPort',
-              required: true,
-              attributes: ['passcodePort1', 'connectorId']
+              model: ConnectorPrivateSession,
+              as: 'connectorPrivateSession',
+              required: true
+            }
+          ]
+        }
+      ],
+      where: {
+        '$flow.is_activated$': true,
+        iofogUuid: iofogUuid
+      }
+    }, {transaction: transaction})
+  }
+
+  findAllActiveFlowPublicModeMicroservices(iofogUuid, transaction) {
+    return Microservice.findAll({
+      include: [
+        {
+          model: Flow,
+          as: 'flow',
+          required: true,
+          attributes: ['isActivated']
+        },
+        {
+          model: MicroservicePublicMode,
+          as: 'publicModes',
+          required: true,
+          include: [
+            {
+              model: ConnectorPublicSession,
+              as: 'connectorPublicSession',
+              required: true
             }
           ]
         }
@@ -273,7 +302,7 @@ class MicroserviceManager extends BaseManager {
         attributes: {exclude: ['id',
                 'sourceMicroserviceUuid', 'destMicroserviceUuid',
                 'sourceNetworkMicroserviceUuid', 'destNetworkMicroserviceUuid',
-                'sourceIofogUuid', 'destIofogUuid', 'connectorPortId']}
+                'sourceIofogUuid', 'destIofogUuid', 'connectorPrivateSessionId']}
       }
       ],
       where: where,

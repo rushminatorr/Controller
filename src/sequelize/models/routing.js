@@ -37,24 +37,6 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'cascade'
     });
 
-    Routing.belongsTo(models.Microservice, {
-      foreignKey: {
-        name: 'sourceNetworkMicroserviceUuid',
-        field: 'source_network_microservice_uuid'
-      },
-      as: 'sourceNetworkMicroservice',
-      onDelete: 'set null'
-    });
-
-    Routing.belongsTo(models.Microservice, {
-      foreignKey: {
-        name: 'destNetworkMicroserviceUuid',
-        field: 'dest_network_microservice_uuid'
-      },
-      as: 'destNetworkMicroservice',
-      onDelete: 'set null'
-    });
-
     Routing.belongsTo(models.Fog, {
       foreignKey: {
         name: 'sourceIofogUuid',
@@ -73,12 +55,12 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'set null'
     });
 
-    Routing.belongsTo(models.ConnectorPort, {
+    Routing.belongsTo(models.ConnectorPrivateSession, {
       foreignKey: {
-        name: 'connectorPortId',
-        field: 'connector_port_id'
+        name: 'connectorPrivateSessionId',
+        field: 'connector_private_session_id'
       },
-      as: 'connectorPort',
+      as: 'connectorPrivateSession',
       onDelete: 'set null'
     });
   };

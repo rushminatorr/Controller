@@ -1,5 +1,5 @@
 // TODO finish with qs.stringify mock EWC-452
-// describe('.openPortOnRandomConnector()', () => {
+// describe('.openSessionOnRandomConnector()', () => {
 //   const transaction = {};
 //   const error = 'Error!';
 //
@@ -14,7 +14,7 @@
 //     }
 //   ];
 //
-//   def('subject', () => $subject.openPortOnRandomConnector(isPublicAccess, transaction));
+//   def('subject', () => $subject.openSessionOnRandomConnector(isPublicAccess, transaction));
 //   def('findConnectorsResponse', () => Promise.resolve(connectors));
 //   def('stringifyResponse', () => Promise.resolve());
 //

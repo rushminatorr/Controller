@@ -13,29 +13,13 @@
 
 const BaseManager = require('./base-manager');
 const models = require('./../models');
-const Routing = models.Routing;
 const ConnectorPrivateSession = models.ConnectorPrivateSession;
 
-class RoutingManager extends BaseManager {
+class ConnectorPrivateSessionManager extends BaseManager {
   getEntity() {
-    return Routing;
-  }
-
-  findAllRoutesByConnectorId(connectorId, transaction) {
-    return Routing.findAll({
-      include: [
-        {
-          model: ConnectorPrivateSession,
-          as: 'connectorPrivateSession',
-          required: true
-        }
-      ],
-      where: {
-        '$connectorPrivateSession.connector_id$': connectorId
-      }
-    }, {transaction: transaction})
+    return ConnectorPrivateSession;
   }
 }
 
-const instance = new RoutingManager();
+const instance = new ConnectorPrivateSessionManager();
 module.exports = instance;
