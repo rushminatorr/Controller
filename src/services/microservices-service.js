@@ -43,8 +43,22 @@ async function listMicroservices(flowId, user, isCLI, transaction) {
   const where = isCLI ? {delete: false} : {flowId: flowId, delete: false};
 
   const microservices = await MicroserviceManager.findAllExcludeFields(where, transaction);
+
+  const res = await Promise.all(microservices.map(async (microservice) => {
+    const microserviceUuid = microservice.uuid;
+    const portMappings = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction);
+    const volumeMappings = await VolumeMappingManager.findAll({microserviceUuid: microserviceUuid}, transaction);
+    const routes = await RoutingManager.findAll({sourceMicroserviceUuid: microserviceUuid}, transaction);
+
+    const fullMs = Object.assign({}, microservice.dataValues);
+    fullMs.ports = portMappings.map((pm) =>  {return {internal: pm.portInternal, external: pm.portExternal, publicMode: pm.isPublic}});
+    fullMs.volumeMappings = volumeMappings.map(vm => vm.dataValues);
+    fullMs.routes = routes.map(r => r.destMicroserviceUuid);
+
+    return fullMs;
+  }));
   return {
-    microservices: microservices
+    microservices: res
   }
 }
 
@@ -60,7 +74,16 @@ async function getMicroservice(microserviceUuid, user, isCLI, transaction) {
   if (!microservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid));
   }
-  return microservice;
+
+  const portMappings = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction);
+  const volumeMappings = await VolumeMappingManager.findAll({microserviceUuid: microserviceUuid}, transaction);
+  const routes = await RoutingManager.findAll({sourceMicroserviceUuid: microserviceUuid}, transaction);
+
+  const res = Object.assign({}, microservice.dataValues);
+  res.ports = portMappings.map((pm) =>  {return {internal: pm.portInternal, external: pm.portExternal, publicMode: pm.isPublic}});
+  res.volumeMappings = volumeMappings.map(vm => vm.dataValues);
+  res.routes = routes.map(r => r.destMicroserviceUuid);
+  return res;
 }
 
 async function createMicroservice(microserviceData, user, isCLI, transaction) {
@@ -106,9 +129,11 @@ async function updateMicroservice(microserviceUuid, microserviceData, user, isCL
       userId: user.id
     };
 
+  const config = _validateMicroserviceConfig(microserviceData.config);
+
   const microserviceToUpdate = {
     name: microserviceData.name,
-    config: microserviceData.config,
+    config: config,
     rebuild: microserviceData.rebuild,
     iofogUuid: microserviceData.iofogUuid,
     rootHostAccess: microserviceData.rootHostAccess,
@@ -404,12 +429,12 @@ async function createVolumeMapping(microserviceUuid, volumeMappingData, user, is
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
   }
 
-  const volueMapping = await VolumeMappingManager.findOne({
+  const volumeMapping = await VolumeMappingManager.findOne({
     microserviceUuid: microserviceUuid,
     hostDestination: volumeMappingData.hostDestination,
     containerDestination: volumeMappingData.containerDestination
   }, transaction);
-  if (volueMapping) {
+  if (volumeMapping) {
     throw new Errors.ValidationError(ErrorMessages.VOLUME_MAPPING_ALREADY_EXISTS);
   }
 
@@ -459,12 +484,20 @@ async function listVolumeMappings(microserviceUuid, user, isCLI, transaction) {
   return await VolumeMappingManager.findAll(volumeMappingWhere, transaction);
 }
 
+// this function works with escape and unescape config, in case of unescaped config, the first split will not work,
+// but the second will work
+function _validateMicroserviceConfig(config) {
+  return config.split('\\"').join('"').split('"').join('\"');
+}
+
 async function _createMicroservice(microserviceData, user, isCLI, transaction) {
+
+  const config = _validateMicroserviceConfig(microserviceData.config);
 
   let newMicroservice = {
     uuid: AppHelper.generateRandomString(32),
     name: microserviceData.name,
-    config: microserviceData.config,
+    config: config,
     catalogItemId: microserviceData.catalogItemId,
     flowId: microserviceData.flowId,
     iofogUuid: microserviceData.iofogUuid,
