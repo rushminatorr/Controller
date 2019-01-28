@@ -267,10 +267,23 @@ async function createRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, i
 
 async function updateRouteOverConnector(connector, transaction) {
   const routes = await RoutingManager.findAllRoutesByConnectorId(connector.id, transaction);
-  const networkMicroserviceUuids = _.flatten(_.map(
-    routes, route => [route.sourceNetworkMicroserviceUuid, route.destNetworkMicroserviceUuid]
-  ));
-  await _updateNetworkMicroserviceConfigs(networkMicroserviceUuids, connector, transaction);
+
+  const iofogUuids = _.flatten(_.map(
+      _.filter(
+        routes, (route) => {return !!route.isNetworkConnection}
+      ),
+      route => [route.sourceIofogUuid, route.destIofogUuid]
+    )
+  );
+
+  const onlyUnique = (value, index, self) => self.indexOf(value) === index;
+  const uniqueIofogUuids = iofogUuids
+    .filter(onlyUnique)
+    .filter(val => val !== null);
+
+  for (const iofogUuid of uniqueIofogUuids) {
+    await ChangeTrackingService.update(iofogUuid, ChangeTrackingService.events.microserviceRouting, transaction);
+  }
 }
 
 async function deleteRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, isCLI, transaction) {
