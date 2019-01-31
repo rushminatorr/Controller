@@ -247,8 +247,7 @@ const getAgentConnectors = async function (fog, transaction) {
       user: connector.user,
       userPassword: connector.userPassword,
       devMode: connector.devMode,
-      cert: fs.readFileSync(connector.cert, "utf-8"),
-      isSelfSignedCert: connector.isSelfSignedCert,
+      cert: fs.readFileSync(connector.serverCert, "utf-8"),
       keystorePassword: connector.keystorePassword
     })
   }

@@ -68,8 +68,8 @@ async function _openSessionOnConnector(connector, isPublicAccess, publisherId) {
       'Content-Length': Buffer.byteLength(data)
     }
   };
-  if (!connector.devMode && connector.cert && connector.isSelfSignedCert === true) {
-    const ca = fs.readFileSync(connector.cert);
+  if (!connector.devMode && connector.caCert && connector.isSelfSignedCert === true) {
+    const ca = fs.readFileSync(connector.caCert);
     options.ca = new Buffer.from(ca);
   }
 
@@ -97,14 +97,10 @@ async function closeSessionOnConnector(connector, isPublicAccess, publisherId) {
     host: connector.domain,
     port: port,
     path: path,
-    method: 'DELETE',
-    // headers: {
-      // 'Content-Type': 'application/json'
-      // 'Content-Length': Buffer.byteLength(0)
-    // }
+    method: 'DELETE'
   };
-  if (!connector.devMode && connector.cert && connector.isSelfSignedCert === true) {
-    const ca = fs.readFileSync(connector.cert);
+  if (!connector.devMode && connector.caCert && connector.isSelfSignedCert === true) {
+    const ca = fs.readFileSync(connector.caCert);
     options.ca = new Buffer.from(ca);
   }
 

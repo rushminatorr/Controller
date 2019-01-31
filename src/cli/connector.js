@@ -45,8 +45,13 @@ class Connector extends BaseCLIHandler {
         group: [constants.CMD_ADD, constants.CMD_UPDATE]
       },
       {
-        name: 'cert', alias: 'c', type: String,
-        description: 'Path to certificate file',
+        name: 'ca-cert', alias: 'c', type: String,
+        description: 'Path to CA certificate',
+        group: [constants.CMD_ADD, constants.CMD_UPDATE]
+      },
+      {
+        name: 'server-cert', alias: 'C', type: String,
+        description: 'Path to server certificate',
         group: [constants.CMD_ADD, constants.CMD_UPDATE]
       },
       {
@@ -185,7 +190,8 @@ function _createConnectorObject(cliData) {
     name: cliData.name,
     domain: cliData.domain,
     publicIp: cliData.publicIp,
-    cert: cliData.cert,
+    caCert: cliData.caCert,
+    serverCert: cliData.serverCert,
     isSelfSignedCert: AppHelper.validateBooleanCliOptions(cliData.selfSignedOn, cliData.selfSignedOff),
     devMode: AppHelper.validateBooleanCliOptions(cliData.devModeOn, cliData.devModeOff),
     keystorePassword: cliData.keystorePassword,

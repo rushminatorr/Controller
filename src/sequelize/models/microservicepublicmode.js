@@ -51,7 +51,7 @@ module.exports = (sequelize, DataTypes) => {
 
     MicroservicePublicMode.belongsTo(models.ConnectorPublicSession, {
       foreignKey: {
-        name: 'ConnectorPublicSessionId',
+        name: 'connectorPublicSessionId',
         field: 'connector_public_session_id'
       },
       as: 'connectorPublicSession',

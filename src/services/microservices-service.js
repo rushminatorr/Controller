@@ -654,15 +654,15 @@ async function _createSimpleRoute(sourceMicroservice, destMicroservice, transact
 async function _updateNetworkMicroserviceConfigs(networkMicroserviceUuids, connector, transaction) {
   const microservices = await MicroserviceManager.findAll({uuid: networkMicroserviceUuids}, transaction);
 
-  let cert;
-  if (!connector.devMode && connector.cert) {
-    cert = AppHelper.trimCertificate(fs.readFileSync(connector.cert, "utf-8"))
+  let caCert;
+  if (!connector.devMode && connector.caCert) {
+    caCert = AppHelper.trimCertificate(fs.readFileSync(connector.caCert, "utf-8"))
   }
 
   for (const microservice of microservices) {
     const msConfig = JSON.parse(microservice.config);
     msConfig.host = connector.domain;
-    msConfig.cert = cert;
+    msConfig.cert = caCert;
     msConfig.devmode = connector.devMode;
     const newConfig = {
       config: JSON.stringify(msConfig),
@@ -697,12 +697,6 @@ async function _createRouteOverConnector(sourceMicroservice, destMicroservice, u
   };
 
   const connectorPrivateSession = await ConnectorPrivateSessionManager.create(connectorPrivateSessionData, transaction);
-
-  // let cert;
-  // if (!connector.devMode && connector.cert) {
-  //   cert = AppHelper.trimCertificate(fs.readFileSync(connector.cert, "utf-8"))
-  // }
-
 
   //create new route
   const routeData = {
@@ -809,22 +803,23 @@ async function _createPortMappingOverConnector(microservice, portMappingData, us
     passKey: session.passKey,
     privatePort: session.privatePort,
     publicPort: session.publicPort,
-    maxConnections: session.maxConnections
+    maxConnections: session.maxConnections,
+    connectorId: connector.id
   };
 
   const connectorPublicSession = await ConnectorPublicSessionManager.create(connectorPublicSessionData, transaction);
 
   const networkCatalogItem = await CatalogService.getNetworkCatalogItem(transaction);
 
-  let cert;
-  if (!connector.devMode && connector.cert) {
-    cert = AppHelper.trimCertificate(fs.readFileSync(connector.cert, "utf-8"));
+  let caCert;
+  if (!connector.devMode && connector.caCert) {
+    caCert = AppHelper.trimCertificate(fs.readFileSync(connector.caCert, "utf-8"));
   }
   //create netw ms1
   const netwMsConfig = {
     'mode': 'public',
     'host': connector.domain,
-    'cert': cert,
+    'cert': caCert,
     'port': session.privatePort,
     'passcode': session.passKey,
     'connectioncount': 60,
@@ -895,7 +890,7 @@ async function _deleteSimplePortMapping(microservice, msPorts, user, transaction
 async function _deletePortMappingOverConnector(microservice, msPorts, user, transaction) {
   const pubModeData = await MicroservicePublicModeManager.findOne({microservicePortId: msPorts.id}, transaction);
 
-  const publicSession = ConnectorPublicSessionManager.findOne({id: pubModeData.connectorPublicSessionId}, transaction);
+  const publicSession = await ConnectorPublicSessionManager.findOne({id: pubModeData.connectorPublicSessionId}, transaction);
   const connector = await ConnectorManager.findOne({id: publicSession.connectorId}, transaction);
 
   try {
@@ -1093,7 +1088,6 @@ module.exports = {
   createVolumeMapping: TransactionDecorator.generateTransaction(createVolumeMapping),
   deleteVolumeMapping: TransactionDecorator.generateTransaction(deleteVolumeMapping),
   listVolumeMappings: TransactionDecorator.generateTransaction(listVolumeMappings),
-  // getPhysicalConnections: getPhysicalConnections,
   deleteNotRunningMicroservices: deleteNotRunningMicroservices,
   updateRouteOverConnector: updateRouteOverConnector,
   updatePortMappingOverConnector: updatePortMappingOverConnector,

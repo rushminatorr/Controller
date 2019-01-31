@@ -54,7 +54,7 @@ async function updateConnector(connectorData, transaction) {
 
   const connector = await ConnectorManager.findOne(queryConnectorData, transaction);
   if (!connector) {
-    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_CONNECTOR_IP, connectorData.publicIp))
+    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_CONNECTOR_NAME, connectorData.name))
   }
 
   await ConnectorManager.update(queryConnectorData, connectorData, transaction);
