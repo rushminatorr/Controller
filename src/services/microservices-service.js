@@ -35,6 +35,8 @@ const RoutingManager = require('../sequelize/managers/routing-manager');
 const Op = require('sequelize').Op;
 const fs = require('fs');
 const _ = require('underscore');
+const TrackingDecorator = require('../decorators/tracking-decorator');
+const TrackingEventType = require('../enums/tracking-event-type');
 
 async function listMicroservices(flowId, user, isCLI, transaction) {
   if (!isCLI) {
@@ -143,9 +145,13 @@ async function updateMicroservice(microserviceUuid, microserviceData, user, isCL
 
   const microserviceDataUpdate = AppHelper.deleteUndefinedFields(microserviceToUpdate);
 
-  const microservice = await MicroserviceManager.findOne(query, transaction);
+  const microservice = await MicroserviceManager.findOneWithCategory(query, transaction);
   if (!microservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
+  }
+
+  if (microservice.catalogItem.category === "SYSTEM") {
+    throw new Errors.ValidationError(AppHelper.formatMessage(ErrorMessages.SYSTEM_MICROSERVICE_UPDATE, microserviceUuid))
   }
 
   if (microserviceDataUpdate.name) {
@@ -216,12 +222,12 @@ async function deleteMicroservice(microserviceUuid, microserviceData, user, isCL
   await _updateChangeTracking(false, microservice.iofogUuid, transaction)
 }
 
-async function deleteNotRunningMicroservices(transaction) {
-  const microservices = await MicroserviceManager.findAllWithStatuses(transaction);
+async function deleteNotRunningMicroservices(fog, transaction) {
+  const microservices = await MicroserviceManager.findAllWithStatuses({iofogUuid: fog.uuid}, transaction);
   microservices
     .filter(microservice => microservice.delete)
     .filter(microservice => microservice.microserviceStatus.status === MicroserviceStates.NOT_RUNNING)
-    .forEach(microservice => deleteMicroserviceWithRoutesAndPortMappings(microservice.uuid, transaction));
+    .forEach(async microservice => await deleteMicroserviceWithRoutesAndPortMappings(microservice.uuid, transaction));
 }
 
 async function createRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, isCLI, transaction) {
@@ -231,7 +237,7 @@ async function createRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, i
 
   const sourceMicroservice = await MicroserviceManager.findOne(sourceWhere, transaction);
   if (!sourceMicroservice) {
-    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, sourceMicroserviceUuid))
+    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_SOURCE_MICROSERVICE_UUID, sourceMicroserviceUuid))
   }
 
   const destWhere = isCLI
@@ -240,7 +246,7 @@ async function createRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, i
 
   const destMicroservice = await MicroserviceManager.findOne(destWhere, transaction);
   if (!destMicroservice) {
-    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, destMicroserviceUuid))
+    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_DEST_MICROSERVICE_UUID, destMicroserviceUuid))
   }
 
   if (!sourceMicroservice.iofogUuid || !destMicroservice.iofogUuid) {
@@ -293,7 +299,7 @@ async function deleteRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, i
 
   const sourceMicroservice = await MicroserviceManager.findOne(sourceWhere, transaction);
   if (!sourceMicroservice) {
-    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, sourceMicroserviceUuid))
+    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_SOURCE_MICROSERVICE_UUID, sourceMicroserviceUuid))
   }
 
   const destWhere = isCLI
@@ -302,7 +308,7 @@ async function deleteRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, i
 
   const destMicroservice = await MicroserviceManager.findOne(destWhere, transaction);
   if (!destMicroservice) {
-    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, destMicroserviceUuid))
+    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_DEST_MICROSERVICE_UUID, destMicroserviceUuid))
   }
 
   const route = await RoutingManager.findOne({
@@ -1074,8 +1080,11 @@ async function _buildLink(protocol, ip, port) {
   return `${protocol}://${ip}:${port}`
 }
 
+//decorated functions
+const  createMicroserviceWithTracking = TrackingDecorator.trackEvent(createMicroservice, TrackingEventType.MICROSERVICE_CREATED);
+
 module.exports = {
-  createMicroservice: TransactionDecorator.generateTransaction(createMicroservice),
+  createMicroservice: TransactionDecorator.generateTransaction(createMicroserviceWithTracking),
   listMicroservices: TransactionDecorator.generateTransaction(listMicroservices),
   getMicroservice: TransactionDecorator.generateTransaction(getMicroservice),
   updateMicroservice: TransactionDecorator.generateTransaction(updateMicroservice),
