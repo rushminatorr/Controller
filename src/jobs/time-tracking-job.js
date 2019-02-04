@@ -28,7 +28,7 @@ class TimeTrackingJob extends BaseJobHandler {
 }
 
 let iteration = 0;
-const intervalMin = 5;
+const intervalMin = 1;
 
 async function trackTime() {
   iteration++;

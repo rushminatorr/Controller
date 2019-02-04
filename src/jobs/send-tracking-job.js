@@ -28,7 +28,7 @@ class SendTrackingJob extends BaseJobHandler {
   }
 }
 
-const intervalMin = 5;
+const intervalMin = 1;
 
 async function sendTracking() {
   const fakeTransactionObject = {fakeTransaction: true};
