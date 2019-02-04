@@ -242,6 +242,10 @@ const getAgentConnectors = async function (fog, transaction) {
   const connectors = await ConnectorManager.findAll({}, transaction);
   const res = [];
   for (const connector of connectors) {
+    let cert = '';
+    if (connector.serverCert) {
+      cert = fs.readFileSync(connector.serverCert, "utf-8");
+    }
     res.push({
       id: connector.id,
       name: connector.name,
@@ -250,7 +254,7 @@ const getAgentConnectors = async function (fog, transaction) {
       user: connector.user,
       userPassword: connector.userPassword,
       devMode: connector.devMode,
-      cert: fs.readFileSync(connector.serverCert, "utf-8"),
+      cert: cert,
       keystorePassword: connector.keystorePassword
     })
   }
