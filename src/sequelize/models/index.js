@@ -19,9 +19,8 @@ try {
     fs.mkdirSync(dbPath, { mode: 0o744 });
   }
 } catch (e) {
-  // can't initialize db folder
   console.log("Cannot initialize DB folder");
-  os.exit(1);
+  process.exit(1);
 }
 
 config.storage = path.resolve(dbPath, config.storage);
