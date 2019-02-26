@@ -11,15 +11,15 @@
  *
  */
 
-const BaseManager = require('./base-manager');
-const models = require('./../models');
-const ConnectorPublicSession = models.ConnectorPublicSession;
+const BaseManager = require('./base-manager')
+const models = require('./../models')
+const ConnectorPublicSession = models.ConnectorPublicSession
 
 class ConnectorPublicSessionManager extends BaseManager {
   getEntity() {
-    return ConnectorPublicSession;
+    return ConnectorPublicSession
   }
 }
 
-const instance = new ConnectorPublicSessionManager();
-module.exports = instance;
+const instance = new ConnectorPublicSessionManager()
+module.exports = instance

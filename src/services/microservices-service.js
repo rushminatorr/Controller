@@ -12,126 +12,130 @@
  */
 
 const logger = require('../logger');
-const TransactionDecorator = require('../decorators/transaction-decorator');
-const MicroserviceManager = require('../sequelize/managers/microservice-manager');
-const MicroserviceStatusManager = require('../sequelize/managers/microservice-status-manager');
-const MicroservicePortManager = require('../sequelize/managers/microservice-port-manager');
-const MicroserviceStates = require('../enums/microservice-state');
-const VolumeMappingManager = require('../sequelize/managers/volume-mapping-manager');
-const ConnectorManager = require('../sequelize/managers/connector-manager');
-const ConnectorPublicSessionManager = require('../sequelize/managers/connector-public-session-manager');
-const ConnectorPrivateSessionManager = require('../sequelize/managers/connector-private-session-manager');
-const MicroservicePublicModeManager = require('../sequelize/managers/microservice-public-mode-manager');
-const ChangeTrackingService = require('./change-tracking-service');
-const ConnectorSessionService = require('./connector-session-service');
-const IoFogService = require('../services/iofog-service');
-const AppHelper = require('../helpers/app-helper');
-const Errors = require('../helpers/errors');
-const ErrorMessages = require('../helpers/error-messages');
-const Validator = require('../schemas/index');
-const FlowService = require('../services/flow-service');
-const CatalogService = require('../services/catalog-service');
-const RoutingManager = require('../sequelize/managers/routing-manager');
-const Op = require('sequelize').Op;
-const fs = require('fs');
-const _ = require('underscore');
-const TrackingDecorator = require('../decorators/tracking-decorator');
-const TrackingEventType = require('../enums/tracking-event-type');
+const TransactionDecorator = require('../decorators/transaction-decorator')
+const MicroserviceManager = require('../sequelize/managers/microservice-manager')
+const MicroserviceStatusManager = require('../sequelize/managers/microservice-status-manager')
+const MicroservicePortManager = require('../sequelize/managers/microservice-port-manager')
+const MicroserviceStates = require('../enums/microservice-state')
+const VolumeMappingManager = require('../sequelize/managers/volume-mapping-manager')
+const ConnectorManager = require('../sequelize/managers/connector-manager')
+const ConnectorPublicSessionManager = require('../sequelize/managers/connector-public-session-manager')
+const ConnectorPrivateSessionManager = require('../sequelize/managers/connector-private-session-manager')
+const MicroservicePublicModeManager = require('../sequelize/managers/microservice-public-mode-manager')
+const ChangeTrackingService = require('./change-tracking-service')
+const ConnectorSessionService = require('./connector-session-service')
+const IoFogService = require('../services/iofog-service')
+const AppHelper = require('../helpers/app-helper')
+const Errors = require('../helpers/errors')
+const ErrorMessages = require('../helpers/error-messages')
+const Validator = require('../schemas/index')
+const FlowService = require('../services/flow-service')
+const CatalogService = require('../services/catalog-service')
+const RoutingManager = require('../sequelize/managers/routing-manager')
+const Op = require('sequelize').Op
+const fs = require('fs')
+const _ = require('underscore')
+const TrackingDecorator = require('../decorators/tracking-decorator')
+const TrackingEventType = require('../enums/tracking-event-type')
 
 async function listMicroservices(flowId, user, isCLI, transaction) {
   if (!isCLI) {
-    await FlowService.getFlow(flowId, user, isCLI, transaction);
+    await FlowService.getFlow(flowId, user, isCLI, transaction)
   }
-  const where = isCLI ? {delete: false} : {flowId: flowId, delete: false};
+  const where = isCLI ? {delete: false} : {flowId: flowId, delete: false}
 
-  const microservices = await MicroserviceManager.findAllExcludeFields(where, transaction);
+  const microservices = await MicroserviceManager.findAllExcludeFields(where, transaction)
 
   const res = await Promise.all(microservices.map(async (microservice) => {
-    const microserviceUuid = microservice.uuid;
-    const portMappings = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction);
-    const volumeMappings = await VolumeMappingManager.findAll({microserviceUuid: microserviceUuid}, transaction);
-    const routes = await RoutingManager.findAll({sourceMicroserviceUuid: microserviceUuid}, transaction);
+    const microserviceUuid = microservice.uuid
+    const portMappings = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction)
+    const volumeMappings = await VolumeMappingManager.findAll({microserviceUuid: microserviceUuid}, transaction)
+    const routes = await RoutingManager.findAll({sourceMicroserviceUuid: microserviceUuid}, transaction)
 
-    const fullMs = Object.assign({}, microservice.dataValues);
-    fullMs.ports = portMappings.map((pm) =>  {return {internal: pm.portInternal, external: pm.portExternal, publicMode: pm.isPublic}});
-    fullMs.volumeMappings = volumeMappings.map(vm => vm.dataValues);
-    fullMs.routes = routes.map(r => r.destMicroserviceUuid);
+    const fullMs = Object.assign({}, microservice.dataValues)
+    fullMs.ports = portMappings.map((pm) => {
+      return {internal: pm.portInternal, external: pm.portExternal, publicMode: pm.isPublic}
+    })
+    fullMs.volumeMappings = volumeMappings.map((vm) => vm.dataValues)
+    fullMs.routes = routes.map((r) => r.destMicroserviceUuid)
 
-    return fullMs;
-  }));
+    return fullMs
+  }))
   return {
-    microservices: res
+    microservices: res,
   }
 }
 
 async function getMicroservice(microserviceUuid, user, isCLI, transaction) {
   if (!isCLI) {
-    await _validateMicroserviceOnGet(user.id, microserviceUuid, transaction);
+    await _validateMicroserviceOnGet(user.id, microserviceUuid, transaction)
   }
 
   const microservice = await MicroserviceManager.findOneExcludeFields({
-    uuid: microserviceUuid, delete: false
-  }, transaction);
+    uuid: microserviceUuid, delete: false,
+  }, transaction)
 
   if (!microservice) {
-    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid));
+    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
   }
 
-  const portMappings = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction);
-  const volumeMappings = await VolumeMappingManager.findAll({microserviceUuid: microserviceUuid}, transaction);
-  const routes = await RoutingManager.findAll({sourceMicroserviceUuid: microserviceUuid}, transaction);
+  const portMappings = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction)
+  const volumeMappings = await VolumeMappingManager.findAll({microserviceUuid: microserviceUuid}, transaction)
+  const routes = await RoutingManager.findAll({sourceMicroserviceUuid: microserviceUuid}, transaction)
 
-  const res = Object.assign({}, microservice.dataValues);
-  res.ports = portMappings.map((pm) =>  {return {internal: pm.portInternal, external: pm.portExternal, publicMode: pm.isPublic}});
-  res.volumeMappings = volumeMappings.map(vm => vm.dataValues);
-  res.routes = routes.map(r => r.destMicroserviceUuid);
-  return res;
+  const res = Object.assign({}, microservice.dataValues)
+  res.ports = portMappings.map((pm) => {
+    return {internal: pm.portInternal, external: pm.portExternal, publicMode: pm.isPublic}
+  })
+  res.volumeMappings = volumeMappings.map((vm) => vm.dataValues)
+  res.routes = routes.map((r) => r.destMicroserviceUuid)
+  return res
 }
 
 async function createMicroservice(microserviceData, user, isCLI, transaction) {
-  await Validator.validate(microserviceData, Validator.schemas.microserviceCreate);
+  await Validator.validate(microserviceData, Validator.schemas.microserviceCreate)
 
-  const microservice = await _createMicroservice(microserviceData, user, isCLI, transaction);
+  const microservice = await _createMicroservice(microserviceData, user, isCLI, transaction)
 
   if (microserviceData.ports) {
     for (const port of microserviceData.ports) {
-      await createPortMapping(microservice.uuid, port, user, isCLI, transaction);
+      await createPortMapping(microservice.uuid, port, user, isCLI, transaction)
     }
   }
   if (microserviceData.volumeMappings) {
-    await _createVolumeMappings(microserviceData.volumeMappings, microservice.uuid, transaction);
+    await _createVolumeMappings(microserviceData.volumeMappings, microservice.uuid, transaction)
   }
 
   if (microserviceData.routes) {
-    await _createRoutes(microserviceData.routes, microservice.uuid, user, transaction);
+    await _createRoutes(microserviceData.routes, microservice.uuid, user, transaction)
   }
 
   if (microserviceData.iofogUuid) {
-    await _updateChangeTracking(false, microserviceData.iofogUuid, transaction);
+    await _updateChangeTracking(false, microserviceData.iofogUuid, transaction)
   }
 
-  await _createMicroserviceStatus(microservice.uuid, transaction);
+  await _createMicroserviceStatus(microservice.uuid, transaction)
 
   return {
-    uuid: microservice.uuid
+    uuid: microservice.uuid,
   }
 }
 
 async function updateMicroservice(microserviceUuid, microserviceData, user, isCLI, transaction) {
-  await Validator.validate(microserviceData, Validator.schemas.microserviceUpdate);
+  await Validator.validate(microserviceData, Validator.schemas.microserviceUpdate)
 
   const query = isCLI
     ?
     {
-      uuid: microserviceUuid
+      uuid: microserviceUuid,
     }
     :
     {
       uuid: microserviceUuid,
-      userId: user.id
-    };
+      userId: user.id,
+    }
 
-  const config = _validateMicroserviceConfig(microserviceData.config);
+  const config = _validateMicroserviceConfig(microserviceData.config)
 
   const microserviceToUpdate = {
     name: microserviceData.name,
@@ -140,54 +144,54 @@ async function updateMicroservice(microserviceUuid, microserviceData, user, isCL
     iofogUuid: microserviceData.iofogUuid,
     rootHostAccess: microserviceData.rootHostAccess,
     logSize: microserviceData.logLimit,
-    volumeMappings: microserviceData.volumeMappings
-  };
+    volumeMappings: microserviceData.volumeMappings,
+  }
 
-  const microserviceDataUpdate = AppHelper.deleteUndefinedFields(microserviceToUpdate);
+  const microserviceDataUpdate = AppHelper.deleteUndefinedFields(microserviceToUpdate)
 
-  const microservice = await MicroserviceManager.findOneWithCategory(query, transaction);
+  const microservice = await MicroserviceManager.findOneWithCategory(query, transaction)
   if (!microservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
   }
 
-  if (microservice.catalogItem.category === "SYSTEM") {
+  if (microservice.catalogItem.category === 'SYSTEM') {
     throw new Errors.ValidationError(AppHelper.formatMessage(ErrorMessages.SYSTEM_MICROSERVICE_UPDATE, microserviceUuid))
   }
 
   if (microserviceDataUpdate.name) {
-    const userId = isCLI ? microservice.userId : user.id;
-    await _checkForDuplicateName(microserviceDataUpdate.name, {id: microserviceUuid}, userId, transaction);
+    const userId = isCLI ? microservice.userId : user.id
+    await _checkForDuplicateName(microserviceDataUpdate.name, {id: microserviceUuid}, userId, transaction)
   }
 
-  //validate fog node
+  // validate fog node
   if (microserviceDataUpdate.iofogUuid) {
-    await IoFogService.getFog({uuid: microserviceDataUpdate.iofogUuid}, user, isCLI, transaction);
+    await IoFogService.getFog({uuid: microserviceDataUpdate.iofogUuid}, user, isCLI, transaction)
   }
 
-  await MicroserviceManager.update(query, microserviceDataUpdate, transaction);
+  await MicroserviceManager.update(query, microserviceDataUpdate, transaction)
 
   if (microserviceDataUpdate.volumeMappings) {
-    await _updateVolumeMappings(microserviceDataUpdate.volumeMappings, microserviceUuid, transaction);
+    await _updateVolumeMappings(microserviceDataUpdate.volumeMappings, microserviceUuid, transaction)
   }
 
   if (microserviceDataUpdate.iofogUuid && microserviceDataUpdate.iofogUuid !== microservice.iofogUuid) {
-    const routes = await _getLogicalNetworkRoutesByFog(microservice.iofogUuid, transaction);
-    for (let route of routes) {
-      await deleteRoute(route.sourceMicroserviceUuid, route.destMicroserviceUuid, user, isCLI, transaction);
-      await createRoute(route.sourceMicroserviceUuid, route.destMicroserviceUuid, user, isCLI, transaction);
-      //update change tracking for another fog in route
+    const routes = await _getLogicalNetworkRoutesByFog(microservice.iofogUuid, transaction)
+    for (const route of routes) {
+      await deleteRoute(route.sourceMicroserviceUuid, route.destMicroserviceUuid, user, isCLI, transaction)
+      await createRoute(route.sourceMicroserviceUuid, route.destMicroserviceUuid, user, isCLI, transaction)
+      // update change tracking for another fog in route
       if (microservice.iofogUuid === route.sourceIofogUuid) {
-        await _updateChangeTracking(false, route.destIofogUuid, transaction);
+        await _updateChangeTracking(false, route.destIofogUuid, transaction)
       } else if (microservice.iofogUuid === route.destIofogUuid) {
-        await _updateChangeTracking(false, route.sourceIofogUuid, transaction);
+        await _updateChangeTracking(false, route.sourceIofogUuid, transaction)
       }
     }
-    //update change tracking for old fog
-    await _updateChangeTracking(false, microservice.iofogUuid, transaction);
+    // update change tracking for old fog
+    await _updateChangeTracking(false, microservice.iofogUuid, transaction)
   }
 
-  //update change tracking for new fog
-  await _updateChangeTracking(!!microserviceData.config, microserviceDataUpdate.iofogUuid, transaction);
+  // update change tracking for new fog
+  await _updateChangeTracking(!!microserviceData.config, microserviceDataUpdate.iofogUuid, transaction)
 }
 
 async function deleteMicroservice(microserviceUuid, microserviceData, user, isCLI, transaction) {
@@ -199,52 +203,55 @@ async function deleteMicroservice(microserviceUuid, microserviceData, user, isCL
     :
     {
       uuid: microserviceUuid,
-      userId: user.id
-    };
+      userId: user.id,
+    }
 
-  const microservice = await MicroserviceManager.findOneWithStatus(where, transaction);
+  const microservice = await MicroserviceManager.findOneWithStatusAndCategory(where, transaction)
   if (!microservice) {
-    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid));
+    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
+  }
+  if (!isCLI && microservice.catalogItem.category === 'SYSTEM') {
+    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.SYSTEM_MICROSERVICE_DELETE, microserviceUuid))
   }
 
-  if (microservice.microserviceStatus.status === MicroserviceStates.NOT_RUNNING) {
-    await deleteMicroserviceWithRoutesAndPortMappings(microserviceUuid, transaction);
+  if (!microservice.microserviceStatus || microservice.microserviceStatus.status === MicroserviceStates.NOT_RUNNING) {
+    await deleteMicroserviceWithRoutesAndPortMappings(microserviceUuid, transaction)
   } else {
     await MicroserviceManager.update({
-        uuid: microserviceUuid
-      },
-      {
-        delete: true,
-        deleteWithCleanUp: !!microserviceData.withCleanup
-      }, transaction);
+      uuid: microserviceUuid,
+    },
+    {
+      delete: true,
+      deleteWithCleanUp: !!microserviceData.withCleanup,
+    }, transaction)
   }
 
   await _updateChangeTracking(false, microservice.iofogUuid, transaction)
 }
 
 async function deleteNotRunningMicroservices(fog, transaction) {
-  const microservices = await MicroserviceManager.findAllWithStatuses({iofogUuid: fog.uuid}, transaction);
+  const microservices = await MicroserviceManager.findAllWithStatuses({iofogUuid: fog.uuid}, transaction)
   microservices
-    .filter(microservice => microservice.delete)
-    .filter(microservice => microservice.microserviceStatus.status === MicroserviceStates.NOT_RUNNING)
-    .forEach(async microservice => await deleteMicroserviceWithRoutesAndPortMappings(microservice.uuid, transaction));
+      .filter((microservice) => microservice.delete)
+      .filter((microservice) => microservice.microserviceStatus.status === MicroserviceStates.NOT_RUNNING)
+      .forEach(async (microservice) => await deleteMicroserviceWithRoutesAndPortMappings(microservice.uuid, transaction))
 }
 
 async function createRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, isCLI, transaction) {
   const sourceWhere = isCLI
     ? {uuid: sourceMicroserviceUuid}
-    : {uuid: sourceMicroserviceUuid, userId: user.id};
+    : {uuid: sourceMicroserviceUuid, userId: user.id}
 
-  const sourceMicroservice = await MicroserviceManager.findOne(sourceWhere, transaction);
+  const sourceMicroservice = await MicroserviceManager.findOne(sourceWhere, transaction)
   if (!sourceMicroservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_SOURCE_MICROSERVICE_UUID, sourceMicroserviceUuid))
   }
 
   const destWhere = isCLI
     ? {uuid: destMicroserviceUuid}
-    : {uuid: destMicroserviceUuid, userId: user.id};
+    : {uuid: destMicroserviceUuid, userId: user.id}
 
-  const destMicroservice = await MicroserviceManager.findOne(destWhere, transaction);
+  const destMicroservice = await MicroserviceManager.findOne(destWhere, transaction)
   if (!destMicroservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_DEST_MICROSERVICE_UUID, destMicroserviceUuid))
   }
@@ -258,8 +265,8 @@ async function createRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, i
 
   const route = await RoutingManager.findOne({
     sourceMicroserviceUuid: sourceMicroserviceUuid,
-    destMicroserviceUuid: destMicroserviceUuid
-  }, transaction);
+    destMicroserviceUuid: destMicroserviceUuid,
+  }, transaction)
   if (route) {
     throw new Errors.ValidationError('route already exists')
   }
@@ -272,7 +279,7 @@ async function createRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, i
 }
 
 async function updateRouteOverConnector(connector, transaction) {
-  const routes = await RoutingManager.findAllRoutesByConnectorId(connector.id, transaction);
+  const routes = await RoutingManager.findAllRoutesByConnectorId(connector.id, transaction)
 
   const iofogUuids = _.flatten(_.map(
       _.filter(
@@ -280,41 +287,41 @@ async function updateRouteOverConnector(connector, transaction) {
       ),
       route => [route.sourceIofogUuid, route.destIofogUuid]
     )
-  );
+  )
 
-  const onlyUnique = (value, index, self) => self.indexOf(value) === index;
+  const onlyUnique = (value, index, self) => self.indexOf(value) === index
   const uniqueIofogUuids = iofogUuids
     .filter(onlyUnique)
-    .filter(val => val !== null);
+    .filter(val => val !== null)
 
   for (const iofogUuid of uniqueIofogUuids) {
-    await ChangeTrackingService.update(iofogUuid, ChangeTrackingService.events.microserviceRouting, transaction);
+    await ChangeTrackingService.update(iofogUuid, ChangeTrackingService.events.microserviceRouting, transaction)
   }
 }
 
 async function deleteRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, isCLI, transaction) {
   const sourceWhere = isCLI
     ? {uuid: sourceMicroserviceUuid}
-    : {uuid: sourceMicroserviceUuid, userId: user.id};
+    : {uuid: sourceMicroserviceUuid, userId: user.id}
 
-  const sourceMicroservice = await MicroserviceManager.findOne(sourceWhere, transaction);
+  const sourceMicroservice = await MicroserviceManager.findOne(sourceWhere, transaction)
   if (!sourceMicroservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_SOURCE_MICROSERVICE_UUID, sourceMicroserviceUuid))
   }
 
   const destWhere = isCLI
     ? {uuid: destMicroserviceUuid}
-    : {uuid: destMicroserviceUuid, userId: user.id};
+    : {uuid: destMicroserviceUuid, userId: user.id}
 
-  const destMicroservice = await MicroserviceManager.findOne(destWhere, transaction);
+  const destMicroservice = await MicroserviceManager.findOne(destWhere, transaction)
   if (!destMicroservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_DEST_MICROSERVICE_UUID, destMicroserviceUuid))
   }
 
   const route = await RoutingManager.findOne({
     sourceMicroserviceUuid: sourceMicroserviceUuid,
-    destMicroserviceUuid: destMicroserviceUuid
-  }, transaction);
+    destMicroserviceUuid: destMicroserviceUuid,
+  }, transaction)
   if (!route) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.ROUTE_NOT_FOUND))
   }
@@ -327,20 +334,20 @@ async function deleteRoute(sourceMicroserviceUuid, destMicroserviceUuid, user, i
 }
 
 async function createPortMapping(microserviceUuid, portMappingData, user, isCLI, transaction) {
-  await Validator.validate(portMappingData, Validator.schemas.portsCreate);
-  await _validatePorts(portMappingData.internal, portMappingData.external);
+  await Validator.validate(portMappingData, Validator.schemas.portsCreate)
+  await _validatePorts(portMappingData.internal, portMappingData.external)
 
   const where = isCLI
     ? {uuid: microserviceUuid}
-    : {uuid: microserviceUuid, userId: user.id};
+    : {uuid: microserviceUuid, userId: user.id}
 
-  const microservice = await MicroserviceManager.findOne(where, transaction);
+  const microservice = await MicroserviceManager.findOne(where, transaction)
   if (!microservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
   }
 
   if (!microservice.iofogUuid) {
-    throw new Errors.ValidationError(AppHelper.formatMessage(ErrorMessages.REQUIRED_FOG_NODE));
+    throw new Errors.ValidationError(AppHelper.formatMessage(ErrorMessages.REQUIRED_FOG_NODE))
   }
 
   const msPorts = await MicroservicePortManager.findOne({
@@ -348,15 +355,15 @@ async function createPortMapping(microserviceUuid, portMappingData, user, isCLI,
     [Op.or]:
       [
         {
-          portInternal: portMappingData.internal
+          portInternal: portMappingData.internal,
         },
         {
-          portExternal: portMappingData.external
-        }
-      ]
-  }, transaction);
+          portExternal: portMappingData.external,
+        },
+      ],
+  }, transaction)
   if (msPorts) {
-    throw new Errors.ValidationError(ErrorMessages.PORT_MAPPING_ALREADY_EXISTS);
+    throw new Errors.ValidationError(ErrorMessages.PORT_MAPPING_ALREADY_EXISTS)
   }
 
   if (portMappingData.publicMode) {
@@ -367,24 +374,28 @@ async function createPortMapping(microserviceUuid, portMappingData, user, isCLI,
 }
 
 async function updatePortMappingOverConnector(connector, transaction) {
-  const microservicePublicModes = await MicroservicePublicModeManager.findAllMicroservicePublicModesByConnectorId(connector.id, transaction);
-  const networkMicroserviceUuids = microservicePublicModes.map(obj => obj.networkMicroserviceUuid);
-  await _updateNetworkMicroserviceConfigs(networkMicroserviceUuids, connector, transaction);
+  const microservicePublicModes = await MicroservicePublicModeManager.findAllMicroservicePublicModesByConnectorId(connector.id,
+      transaction)
+  const networkMicroserviceUuids = microservicePublicModes.map((obj) => obj.networkMicroserviceUuid)
+  await _updateNetworkMicroserviceConfigs(networkMicroserviceUuids, connector, transaction)
 }
 
 async function deletePortMapping(microserviceUuid, internalPort, user, isCLI, transaction) {
   const where = isCLI
     ? {uuid: microserviceUuid}
-    : {uuid: microserviceUuid, userId: user.id};
+    : {uuid: microserviceUuid, userId: user.id}
 
-  const microservice = await MicroserviceManager.findOne(where, transaction);
+  if (!internalPort) {
+    throw new Errors.ValidationError(ErrorMessages.PORT_MAPPING_INTERNAL_PORT_NOT_PROVIDED)
+  }
+  const microservice = await MicroserviceManager.findOne(where, transaction)
   if (!microservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
   }
 
   const msPorts = await MicroservicePortManager.findOne({
     microserviceUuid: microserviceUuid,
-    portInternal: internalPort
+    portInternal: internalPort,
   }, transaction)
   if (!msPorts) {
     throw new Errors.NotFoundError('port mapping not exists')
@@ -400,7 +411,7 @@ async function deletePortMapping(microserviceUuid, internalPort, user, isCLI, tr
 async function listPortMappings(microserviceUuid, user, isCLI, transaction) {
   const where = isCLI
     ? {uuid: microserviceUuid}
-    : {uuid: microserviceUuid, userId: user.id};
+    : {uuid: microserviceUuid, userId: user.id}
   const microservice = await MicroserviceManager.findOne(where, transaction)
   if (!microservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
@@ -411,7 +422,7 @@ async function listPortMappings(microserviceUuid, user, isCLI, transaction) {
 }
 
 async function getPhysicalConnections(microservice, transaction) {
-  let res = [];
+  const res = []
   const pubModes = await MicroservicePublicModeManager.findAll({microserviceUuid: microservice.uuid}, transaction)
   for (const pm of pubModes) {
     res.push(pm.networkMicroserviceUuid)
@@ -420,7 +431,7 @@ async function getPhysicalConnections(microservice, transaction) {
   const sourceRoutes = await RoutingManager.findAll({sourceMicroserviceUuid: microservice.uuid}, transaction)
   for (const sr of sourceRoutes) {
     if (!sr.sourceIofogUuid || !sr.destIofogUuid) {
-      continue;
+      continue
     } else if (sr.sourceIofogUuid === sr.destIofogUuid) {
       res.push(sr.destMicroserviceUuid)
     } else if (sr.sourceIofogUuid !== sr.destIofogUuid) {
@@ -437,13 +448,13 @@ async function getPhysicalConnections(microservice, transaction) {
 }
 
 async function createVolumeMapping(microserviceUuid, volumeMappingData, user, isCLI, transaction) {
-  await Validator.validate(volumeMappingData, Validator.schemas.volumeMappings);
+  await Validator.validate(volumeMappingData, Validator.schemas.volumeMappings)
 
   const where = isCLI
     ? {uuid: microserviceUuid}
-    : {uuid: microserviceUuid, userId: user.id};
+    : {uuid: microserviceUuid, userId: user.id}
 
-  const microservice = await MicroserviceManager.findOne(where, transaction);
+  const microservice = await MicroserviceManager.findOne(where, transaction)
   if (!microservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
   }
@@ -451,71 +462,70 @@ async function createVolumeMapping(microserviceUuid, volumeMappingData, user, is
   const volumeMapping = await VolumeMappingManager.findOne({
     microserviceUuid: microserviceUuid,
     hostDestination: volumeMappingData.hostDestination,
-    containerDestination: volumeMappingData.containerDestination
-  }, transaction);
+    containerDestination: volumeMappingData.containerDestination,
+  }, transaction)
   if (volumeMapping) {
-    throw new Errors.ValidationError(ErrorMessages.VOLUME_MAPPING_ALREADY_EXISTS);
+    throw new Errors.ValidationError(ErrorMessages.VOLUME_MAPPING_ALREADY_EXISTS)
   }
 
   const volumeMappingObj = {
     microserviceUuid: microserviceUuid,
     hostDestination: volumeMappingData.hostDestination,
     containerDestination: volumeMappingData.containerDestination,
-    accessMode: volumeMappingData.accessMode
-  };
+    accessMode: volumeMappingData.accessMode,
+  }
 
-  return await VolumeMappingManager.create(volumeMappingObj, transaction);
+  return await VolumeMappingManager.create(volumeMappingObj, transaction)
 }
 
 async function deleteVolumeMapping(microserviceUuid, volumeMappingUuid, user, isCLI, transaction) {
   const where = isCLI
     ? {uuid: microserviceUuid}
-    : {uuid: microserviceUuid, userId: user.id};
+    : {uuid: microserviceUuid, userId: user.id}
 
-  const microservice = await MicroserviceManager.findOne(where, transaction);
+  const microservice = await MicroserviceManager.findOne(where, transaction)
   if (!microservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
   }
 
   const volumeMappingWhere = {
     uuid: volumeMappingUuid,
-    microserviceUuid: microserviceUuid
-  };
+    microserviceUuid: microserviceUuid,
+  }
 
-  const affectedRows = await VolumeMappingManager.delete(volumeMappingWhere, transaction);
+  const affectedRows = await VolumeMappingManager.delete(volumeMappingWhere, transaction)
   if (affectedRows === 0) {
-    throw new Errors.ValidationError(AppHelper.formatMessage(ErrorMessages.INVALID_VOLUME_MAPPING_UUID, volumeMappingUuid));
+    throw new Errors.ValidationError(AppHelper.formatMessage(ErrorMessages.INVALID_VOLUME_MAPPING_UUID, volumeMappingUuid))
   }
 }
 
 async function listVolumeMappings(microserviceUuid, user, isCLI, transaction) {
   const where = isCLI
     ? {uuid: microserviceUuid}
-    : {uuid: microserviceUuid, userId: user.id};
-  const microservice = await MicroserviceManager.findOne(where, transaction);
+    : {uuid: microserviceUuid, userId: user.id}
+  const microservice = await MicroserviceManager.findOne(where, transaction)
   if (!microservice) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
   }
 
   const volumeMappingWhere = {
-    microserviceUuid: microserviceUuid
-  };
-  return await VolumeMappingManager.findAll(volumeMappingWhere, transaction);
+    microserviceUuid: microserviceUuid,
+  }
+  return await VolumeMappingManager.findAll(volumeMappingWhere, transaction)
 }
 
 // this function works with escape and unescape config, in case of unescaped config, the first split will not work,
 // but the second will work
 function _validateMicroserviceConfig(config) {
   if (config === undefined || config === '{}') {
-    return '{}';
+    return '{}'
   }
 
-  return config.split('\\"').join('"').split('"').join('\"');
+  return config.split('\\"').join('"').split('"').join('\"')
 }
 
 async function _createMicroservice(microserviceData, user, isCLI, transaction) {
-
-  const config = _validateMicroserviceConfig(microserviceData.config);
+  const config = _validateMicroserviceConfig(microserviceData.config)
 
   let newMicroservice = {
     uuid: AppHelper.generateRandomString(32),
@@ -526,38 +536,37 @@ async function _createMicroservice(microserviceData, user, isCLI, transaction) {
     iofogUuid: microserviceData.iofogUuid,
     rootHostAccess: microserviceData.rootHostAccess,
     logSize: microserviceData.logLimit,
-    userId: user.id
-  };
-
-  newMicroservice = AppHelper.deleteUndefinedFields(newMicroservice);
-
-  await _checkForDuplicateName(newMicroservice.name, {}, user.id, transaction);
-
-  //validate catalog item
-  await CatalogService.getCatalogItem(newMicroservice.catalogItemId, user, isCLI, transaction);
-  //validate flow
-  await FlowService.getFlow(newMicroservice.flowId, user, isCLI, transaction);
-  //validate fog node
-  if (newMicroservice.iofogUuid) {
-    await IoFogService.getFog({uuid: newMicroservice.iofogUuid}, user, isCLI, transaction);
+    userId: user.id,
   }
 
-  return await MicroserviceManager.create(newMicroservice, transaction);
+  newMicroservice = AppHelper.deleteUndefinedFields(newMicroservice)
+
+  await _checkForDuplicateName(newMicroservice.name, {}, user.id, transaction)
+
+  // validate catalog item
+  await CatalogService.getCatalogItem(newMicroservice.catalogItemId, user, isCLI, transaction)
+  // validate flow
+  await FlowService.getFlow(newMicroservice.flowId, user, isCLI, transaction)
+  // validate fog node
+  if (newMicroservice.iofogUuid) {
+    await IoFogService.getFog({uuid: newMicroservice.iofogUuid}, user, isCLI, transaction)
+  }
+
+  return await MicroserviceManager.create(newMicroservice, transaction)
 }
 
 async function _createMicroserviceStatus(uuid, transaction) {
   return await MicroserviceStatusManager.create({
-    microserviceUuid: uuid
-  }, transaction);
+    microserviceUuid: uuid,
+  }, transaction)
 }
 
 async function _createVolumeMappings(volumeMappings, microserviceUuid, transaction) {
-
-  const mappings = [];
+  const mappings = []
   for (const volumeMapping of volumeMappings) {
-    const mapping = Object.assign({}, volumeMapping);
-    mapping.microserviceUuid = microserviceUuid;
-    mappings.push(mapping);
+    const mapping = Object.assign({}, volumeMapping)
+    mapping.microserviceUuid = microserviceUuid
+    mappings.push(mapping)
   }
 
   await VolumeMappingManager.bulkCreate(mappings, transaction)
@@ -570,26 +579,26 @@ async function _createRoutes(routes, microserviceUuid, user, transaction) {
 }
 
 async function _updateVolumeMappings(volumeMappings, microserviceUuid, transaction) {
-  for (let volumeMapping of volumeMappings) {
+  for (const volumeMapping of volumeMappings) {
     await VolumeMappingManager.update({
-      microserviceUuid: microserviceUuid
-    }, volumeMapping, transaction);
+      microserviceUuid: microserviceUuid,
+    }, volumeMapping, transaction)
   }
 }
 
 async function _updateChangeTracking(configUpdated, fogNodeUuid, transaction) {
   if (configUpdated) {
-    await ChangeTrackingService.update(fogNodeUuid, ChangeTrackingService.events.microserviceCommon, transaction);
+    await ChangeTrackingService.update(fogNodeUuid, ChangeTrackingService.events.microserviceCommon, transaction)
   } else {
-    await ChangeTrackingService.update(fogNodeUuid, ChangeTrackingService.events.microserviceList, transaction);
+    await ChangeTrackingService.update(fogNodeUuid, ChangeTrackingService.events.microserviceList, transaction)
   }
 }
 
-//TODO use in _deleteMicroserviceWithRoutesAndPortMappings
+/* TODO use in _deleteMicroserviceWithRoutesAndPortMappings
 async function _deletePortMappings(microservice, user, transaction) {
   const msPortMappings = await MicroservicePortManager.findAll({
-    microserviceUuid: microservice.uuid
-  }, transaction);
+    microserviceUuid: microservice.uuid,
+  }, transaction)
 
   for (const msPorts of msPortMappings) {
     if (msPorts.isPublic) {
@@ -598,7 +607,7 @@ async function _deletePortMappings(microservice, user, transaction) {
       await _deleteSimplePortMapping(microservice, msPorts, user, transaction)
     }
   }
-}
+}*/
 
 async function _checkForDuplicateName(name, item, userId, transaction) {
   if (name) {
@@ -607,17 +616,17 @@ async function _checkForDuplicateName(name, item, userId, transaction) {
       {
         name: name,
         uuid: {[Op.ne]: item.id},
-        userId: userId
+        userId: userId,
       }
       :
       {
         name: name,
-        userId: userId
-      };
+        userId: userId,
+      }
 
-    const result = await MicroserviceManager.findOne(where, transaction);
+    const result = await MicroserviceManager.findOne(where, transaction)
     if (result) {
-      throw new Errors.DuplicatePropertyError(AppHelper.formatMessage(ErrorMessages.DUPLICATE_NAME, name));
+      throw new Errors.DuplicatePropertyError(AppHelper.formatMessage(ErrorMessages.DUPLICATE_NAME, name))
     }
   }
 }
@@ -625,40 +634,31 @@ async function _checkForDuplicateName(name, item, userId, transaction) {
 async function _validateMicroserviceOnGet(userId, microserviceUuid, transaction) {
   const where = {
     '$flow.user.id$': userId,
-    uuid: microserviceUuid
-  };
-  const microservice = await MicroserviceManager.findMicroserviceOnGet(where, transaction);
+    'uuid': microserviceUuid,
+  }
+  const microservice = await MicroserviceManager.findMicroserviceOnGet(where, transaction)
   if (!microservice) {
-    throw new Errors.NotFoundError(ErrorMessages.INVALID_MICROSERVICE_USER);
+    throw new Errors.NotFoundError(ErrorMessages.INVALID_MICROSERVICE_USER)
   }
 }
 
-/**
- * use to create route between microservices on same fog
- *
- * @param sourceMicroservice
- * @param destMicroservice
- * @param transaction
- * @returns {Promise<void>}
- * @private
- */
 async function _createSimpleRoute(sourceMicroservice, destMicroservice, transaction) {
-  //create new route
+  // create new route
   const routeData = {
     isNetworkConnection: false,
     sourceMicroserviceUuid: sourceMicroservice.uuid,
     destMicroserviceUuid: destMicroservice.uuid,
     sourceIofogUuid: sourceMicroservice.iofogUuid,
-    destIofogUuid: destMicroservice.iofogUuid //same as sourceIofogUuid
-  };
+    destIofogUuid: destMicroservice.iofogUuid, // same as sourceIofogUuid
+  }
 
-  await RoutingManager.create(routeData, transaction);
+  await RoutingManager.create(routeData, transaction)
   await _switchOnUpdateFlagsForMicroservicesInRoute(sourceMicroservice, destMicroservice, transaction)
 }
 
 
 async function _updateNetworkMicroserviceConfigs(networkMicroserviceUuids, connector, transaction) {
-  const microservices = await MicroserviceManager.findAll({uuid: networkMicroserviceUuids}, transaction);
+  const microservices = await MicroserviceManager.findAll({uuid: networkMicroserviceUuids}, transaction)
 
   let caCert;
   if (!connector.devMode && connector.caCert) {
@@ -666,35 +666,35 @@ async function _updateNetworkMicroserviceConfigs(networkMicroserviceUuids, conne
   }
 
   for (const microservice of microservices) {
-    const msConfig = JSON.parse(microservice.config);
-    msConfig.host = connector.domain;
-    msConfig.cert = caCert;
-    msConfig.devmode = connector.devMode;
+    const msConfig = JSON.parse(microservice.config)
+    msConfig.host = connector.domain
+    msConfig.cert = caCert
+    msConfig.devmode = connector.devMode
     const newConfig = {
       config: JSON.stringify(msConfig),
-      rebuild: true
-    };
+      rebuild: true,
+    }
     await MicroserviceManager.update({
-      uuid: microservice.uuid
-    }, newConfig, transaction);
+      uuid: microservice.uuid,
+    }, newConfig, transaction)
   }
 
-  const onlyUnique = (value, index, self) => self.indexOf(value) === index;
+  const onlyUnique = (value, index, self) => self.indexOf(value) === index
   const iofogUuids = microservices
-    .map(obj => obj.iofogUuid)
-    .filter(onlyUnique)
-    .filter(val => val !== null);
+      .map((obj) => obj.iofogUuid)
+      .filter(onlyUnique)
+      .filter((val) => val !== null)
 
   for (const iofogUuid of iofogUuids) {
-    await ChangeTrackingService.update(iofogUuid, ChangeTrackingService.events.microserviceCommon, transaction);
+    await ChangeTrackingService.update(iofogUuid, ChangeTrackingService.events.microserviceCommon, transaction)
   }
 }
 
 async function _createRouteOverConnector(sourceMicroservice, destMicroservice, user, transaction) {
 
-  const connectorSession = await ConnectorSessionService.openSessionOnRandomConnector(false, sourceMicroservice.uuid, transaction);
-  const privateSession = connectorSession.session;
-  const connector = connectorSession.connector;
+  const connectorSession = await ConnectorSessionService.openSessionOnRandomConnector(false, sourceMicroservice.uuid, transaction)
+  const privateSession = connectorSession.session
+  const connector = connectorSession.connector
 
   const connectorPrivateSessionData = {
     publisherId: privateSession.publisherId,
@@ -702,9 +702,9 @@ async function _createRouteOverConnector(sourceMicroservice, destMicroservice, u
     connectorId: connector.id
   };
 
-  const connectorPrivateSession = await ConnectorPrivateSessionManager.create(connectorPrivateSessionData, transaction);
+  const connectorPrivateSession = await ConnectorPrivateSessionManager.create(connectorPrivateSessionData, transaction)
 
-  //create new route
+  // create new route
   const routeData = {
     isNetworkConnection: true,
     sourceMicroserviceUuid: sourceMicroservice.uuid,
@@ -712,8 +712,8 @@ async function _createRouteOverConnector(sourceMicroservice, destMicroservice, u
     sourceIofogUuid: sourceMicroservice.iofogUuid,
     destIofogUuid: destMicroservice.iofogUuid,
     connectorPrivateSessionId: connectorPrivateSession.id
-  };
-  await RoutingManager.create(routeData, transaction);
+  }
+  await RoutingManager.create(routeData, transaction)
 
   await _switchOnUpdateFlagsForMicroservicesInRoute(sourceMicroservice, destMicroservice, transaction)
 }
@@ -730,66 +730,66 @@ async function _createNetworkMicroserviceForMaster(masterMicroservice, sourceNet
     rootHostAccess: false,
     logSize: 50,
     userId: masterMicroservice.userId,
-    configLastUpdated: Date.now()
-  };
+    configLastUpdated: Date.now(),
+  }
 
-  return await MicroserviceManager.create(sourceNetworkMicroserviceData, transaction);
+  return await MicroserviceManager.create(sourceNetworkMicroserviceData, transaction)
 }
 
 async function _switchOnUpdateFlagsForMicroservicesInRoute(sourceMicroservice, destMicroservice, transaction) {
   const updateRebuildMs = {
-    rebuild: true
-  };
-  await MicroserviceManager.update({uuid: sourceMicroservice.uuid}, updateRebuildMs, transaction);
-  await MicroserviceManager.update({uuid: destMicroservice.uuid}, updateRebuildMs, transaction);
+    rebuild: true,
+  }
+  await MicroserviceManager.update({uuid: sourceMicroservice.uuid}, updateRebuildMs, transaction)
+  await MicroserviceManager.update({uuid: destMicroservice.uuid}, updateRebuildMs, transaction)
 
-  await ChangeTrackingService.update(sourceMicroservice.iofogUuid, ChangeTrackingService.events.microserviceFull, transaction);
-  await ChangeTrackingService.update(destMicroservice.iofogUuid, ChangeTrackingService.events.microserviceFull, transaction);
+  await ChangeTrackingService.update(sourceMicroservice.iofogUuid, ChangeTrackingService.events.microserviceFull, transaction)
+  await ChangeTrackingService.update(destMicroservice.iofogUuid, ChangeTrackingService.events.microserviceFull, transaction)
 }
 
 async function _deleteSimpleRoute(route, transaction) {
-  await RoutingManager.delete({id: route.id}, transaction);
+  await RoutingManager.delete({id: route.id}, transaction)
 
-  await ChangeTrackingService.update(route.sourceIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction);
-  await ChangeTrackingService.update(route.destIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction);
+  await ChangeTrackingService.update(route.sourceIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction)
+  await ChangeTrackingService.update(route.destIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction)
 }
 
 async function _deleteRouteOverConnector(route, transaction) {
-  const privateSession = await ConnectorPrivateSessionManager.findOne({id: route.connectorPrivateSessionId}, transaction);
-  const connector = await ConnectorManager.findOne({id: privateSession.connectorId}, transaction);
+  const privateSession = await ConnectorPrivateSessionManager.findOne({id: route.connectorPrivateSessionId}, transaction)
+  const connector = await ConnectorManager.findOne({id: privateSession.connectorId}, transaction)
 
   const where = {
     id: {[Op.ne]: privateSession.id},
     publisherId: privateSession.publisherId
   };
 
-  const otherPublisherPrivateSessions = await ConnectorPrivateSessionManager.findAll(where, transaction);
+  const otherPublisherPrivateSessions = await ConnectorPrivateSessionManager.findAll(where, transaction)
   if (otherPublisherPrivateSessions.length === 0) {
     try {
-      await ConnectorSessionService.closeSessionOnConnector(connector, false, privateSession.publisherId);
+      await ConnectorSessionService.closeSessionOnConnector(connector, false, privateSession.publisherId)
     } catch (e) {
-      logger.warn(`Can't close private session ${privateSession.publisherId} on connector ${connector.name}. Delete manually if necessary`);
+      logger.warn(`Can't close private session ${privateSession.publisherId} on connector ${connector.name}. Delete manually if necessary`)
     }
   }
 
-  await RoutingManager.delete({id: route.id}, transaction);
-  await ConnectorPrivateSessionManager.delete({id: privateSession.id}, transaction);
+  await RoutingManager.delete({id: route.id}, transaction)
+  await ConnectorPrivateSessionManager.delete({id: privateSession.id}, transaction)
 
-  await ChangeTrackingService.update(route.sourceIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction);
-  await ChangeTrackingService.update(route.destIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction);
+  await ChangeTrackingService.update(route.sourceIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction)
+  await ChangeTrackingService.update(route.destIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction)
 }
 
 async function _createSimplePortMapping(microservice, portMappingData, user, transaction) {
-  //create port mapping
+  // create port mapping
   const mappingData = {
     isPublic: false,
     portInternal: portMappingData.internal,
     portExternal: portMappingData.external,
     userId: microservice.userId,
-    microserviceUuid: microservice.uuid
-  };
+    microserviceUuid: microservice.uuid,
+  }
 
-  await MicroservicePortManager.create(mappingData, transaction);
+  await MicroservicePortManager.create(mappingData, transaction)
   await _switchOnUpdateFlagsForMicroservicesForPortMapping(microservice, false, transaction)
 }
 
@@ -799,10 +799,10 @@ async function _createPortMappingOverConnector(microservice, portMappingData, us
     true,
     microservice.uuid,
     transaction
-  );
+  )
 
   const session = connectorSession.session;
-  const connector = connectorSession.connector;
+  const connector = connectorSession.connector
 
   const connectorPublicSessionData = {
     publisherId: session.publisherId,
@@ -813,15 +813,15 @@ async function _createPortMappingOverConnector(microservice, portMappingData, us
     connectorId: connector.id
   };
 
-  const connectorPublicSession = await ConnectorPublicSessionManager.create(connectorPublicSessionData, transaction);
+  const connectorPublicSession = await ConnectorPublicSessionManager.create(connectorPublicSessionData, transaction)
 
-  const networkCatalogItem = await CatalogService.getNetworkCatalogItem(transaction);
+  const networkCatalogItem = await CatalogService.getNetworkCatalogItem(transaction)
 
-  let caCert;
+  let caCert
   if (!connector.devMode && connector.caCert) {
-    caCert = AppHelper.trimCertificate(fs.readFileSync(connector.caCert, "utf-8"));
+    caCert = AppHelper.trimCertificate(fs.readFileSync(connector.caCert, "utf-8"))
   }
-  //create netw ms1
+  // create netw ms1
   const netwMsConfig = {
     'mode': 'public',
     'host': connector.domain,
@@ -833,26 +833,26 @@ async function _createPortMappingOverConnector(microservice, portMappingData, us
     'localport': portMappingData.external,
     'heartbeatfrequency': 20000,
     'heartbeatabsencethreshold': 60000,
-    'devmode': connector.devMode
-  };
+    'devmode': connector.devMode,
+  }
   const networkMicroservice = await _createNetworkMicroserviceForMaster(
-    microservice,
-    netwMsConfig,
-    networkCatalogItem,
-    user,
-    transaction
-  );
+      microservice,
+      netwMsConfig,
+      networkCatalogItem,
+      user,
+      transaction
+  )
 
-  //create public port mapping
+  // create public port mapping
   const mappingData = {
     isPublic: true,
     portInternal: portMappingData.internal,
     portExternal: portMappingData.external,
     userId: microservice.userId,
-    microserviceUuid: microservice.uuid
-  };
+    microserviceUuid: microservice.uuid,
+  }
 
-  const msPortMapping = await MicroservicePortManager.create(mappingData, transaction);
+  const msPortMapping = await MicroservicePortManager.create(mappingData, transaction)
 
   const msPubModeData = {
     microserviceUuid: microservice.uuid,
@@ -861,19 +861,19 @@ async function _createPortMappingOverConnector(microservice, portMappingData, us
     microservicePortId: msPortMapping.id,
     connectorPublicSessionId: connectorPublicSession.id
   };
-  await MicroservicePublicModeManager.create(msPubModeData, transaction);
+  await MicroservicePublicModeManager.create(msPubModeData, transaction)
 
 
-  await _switchOnUpdateFlagsForMicroservicesForPortMapping(microservice, true, transaction);
+  await _switchOnUpdateFlagsForMicroservicesForPortMapping(microservice, true, transaction)
   const publicLink = await _buildLink(connector.devMode ? 'http' : 'https', connector.publicIp, connectorPublicSession.publicPort)
   return {publicLink: publicLink}
 }
 
 async function _switchOnUpdateFlagsForMicroservicesForPortMapping(microservice, isPublic, transaction) {
   const updateRebuildMs = {
-    rebuild: true
-  };
-  await MicroserviceManager.update({uuid: microservice.uuid}, updateRebuildMs, transaction);
+    rebuild: true,
+  }
+  await MicroserviceManager.update({uuid: microservice.uuid}, updateRebuildMs, transaction)
 
   if (isPublic) {
     await ChangeTrackingService.update(microservice.iofogUuid, ChangeTrackingService.events.microserviceFull, transaction)
@@ -884,61 +884,60 @@ async function _switchOnUpdateFlagsForMicroservicesForPortMapping(microservice, 
 
 
 async function _deleteSimplePortMapping(microservice, msPorts, user, transaction) {
-  await MicroservicePortManager.delete({id: msPorts.id}, transaction);
+  await MicroservicePortManager.delete({id: msPorts.id}, transaction)
 
   const updateRebuildMs = {
-    rebuild: true
-  };
-  await MicroserviceManager.update({uuid: microservice.uuid}, updateRebuildMs, transaction);
-  await ChangeTrackingService.update(microservice.iofogUuid, ChangeTrackingService.events.microserviceCommon, transaction);
+    rebuild: true,
+  }
+  await MicroserviceManager.update({uuid: microservice.uuid}, updateRebuildMs, transaction)
+  await ChangeTrackingService.update(microservice.iofogUuid, ChangeTrackingService.events.microserviceCommon, transaction)
 }
 
 async function _deletePortMappingOverConnector(microservice, msPorts, user, transaction) {
-  const pubModeData = await MicroservicePublicModeManager.findOne({microservicePortId: msPorts.id}, transaction);
+  const pubModeData = await MicroservicePublicModeManager.findOne({microservicePortId: msPorts.id}, transaction)
 
-  const publicSession = await ConnectorPublicSessionManager.findOne({id: pubModeData.connectorPublicSessionId}, transaction);
-  const connector = await ConnectorManager.findOne({id: publicSession.connectorId}, transaction);
+  const publicSession = await ConnectorPublicSessionManager.findOne({id: pubModeData.connectorPublicSessionId}, transaction)
+  const connector = await ConnectorManager.findOne({id: publicSession.connectorId}, transaction)
 
   try {
-    await ConnectorSessionService.closeSessionOnConnector(connector, true, publicSession.publisherId);
+    await ConnectorSessionService.closeSessionOnConnector(connector, true, publicSession.publisherId)
   } catch (e) {
-    logger.warn(`Can't close public session ${publicSession.publisherId} on connector ${connector.publicIp}. Delete manually if necessary`);
+    logger.warn(`Can't close public session ${publicSession.publisherId} on connector ${connector.publicIp}. Delete manually if necessary`)
   }
-  await MicroservicePublicModeManager.delete({id: pubModeData.id}, transaction);
-  await MicroservicePortManager.delete({id: msPorts.id}, transaction);
-  await ConnectorPublicSessionManager.delete({id: publicSession.id}, transaction);
-  await MicroserviceManager.delete({uuid: pubModeData.networkMicroserviceUuid}, transaction);
+  await MicroservicePublicModeManager.delete({id: pubModeData.id}, transaction)
+  await MicroservicePortManager.delete({id: msPorts.id}, transaction)
+  await ConnectorPublicSessionManager.delete({id: publicSession.id}, transaction)
+  await MicroserviceManager.delete({uuid: pubModeData.networkMicroserviceUuid}, transaction)
 
   const updateRebuildMs = {
-    rebuild: true
-  };
-  await MicroserviceManager.update({uuid: microservice.uuid}, updateRebuildMs, transaction);
+    rebuild: true,
+  }
+  await MicroserviceManager.update({uuid: microservice.uuid}, updateRebuildMs, transaction)
 
-  await ChangeTrackingService.update(pubModeData.iofogUuid, ChangeTrackingService.events.microserviceFull, transaction);
+  await ChangeTrackingService.update(pubModeData.iofogUuid, ChangeTrackingService.events.microserviceFull, transaction)
 }
 
 async function _validatePorts(internal, external) {
   if (internal <= 0 || internal > 65535
     || external <= 0 || external > 65535
-    //TODO find this ports in project. check is possible to delete some of them
+    // TODO find this ports in project. check is possible to delete some of them
     || external === 60400 || external === 60401 || external === 10500 || external === 54321 || external === 55555) {
-
     throw new Errors.ValidationError('Incorrect port')
   }
 }
 
 async function _buildPortsList(portsPairs, transaction) {
-  const res = [];
+  const res = []
   for (const ports of portsPairs) {
-    let portMappingResposeData = {
+    const portMappingResposeData = {
       internal: ports.portInternal,
       external: ports.portExternal,
-      publicMode: ports.isPublic
-    };
+      publicMode: ports.isPublic,
+    }
     if (ports.isPublic) {
-      const pubMode = await MicroservicePublicModeManager.findOne({microservicePortId: ports.id}, transaction);
-      const connectorPublicSession = await ConnectorPublicSessionManager.findOne({id: pubMode.connectorPublicSessionId}, transaction);
-      const connector = await ConnectorManager.findOne({id: connectorPublicSession.connectorId}, transaction);
+      const pubMode = await MicroservicePublicModeManager.findOne({microservicePortId: ports.id}, transaction)
+      const connectorPublicSession = await ConnectorPublicSessionManager.findOne({id: pubMode.connectorPublicSessionId}, transaction)
+      const connector = await ConnectorManager.findOne({id: connectorPublicSession.connectorId}, transaction)
 
       portMappingResposeData.publicLink = await _buildLink(
         connector.devMode
@@ -964,53 +963,13 @@ async function _listPortMappings(microserviceUuid, user, isCLI, transaction) {
   return await _buildPortsList(portsPairs, transaction)
 }
 
-// async function getPhysicalConections(microservices, fog, transaction) {
-//   let res = []
-//
-//   const sourceRoutes = await RoutingManager.findAll({sourceIofogUuid: fog.uuid}, transaction);
-//   const destRoutes = await RoutingManager.findAll({destIofogUuid: fog.uuid}, transaction)
-//
-//   for (microservice of microservices) {
-//
-//   }
-//
-//
-//   const sourceRoutes = await RoutingManager.findAll({sourceMicroserviceUuid: microservice.uuid}, transaction);
-//   for (const sourceRoute of sourceRoutes) {
-//     if (sourceRoute.sourceIofogUuid && sourceRoute.destIofogUuid) {
-//       const routeObj = sourceRoute.sourceIofogUuid === sourceRoute.destIofogUuid
-//         ?
-//         {
-//           microserviceUuid: sourceRoute.destMicroserviceUuid,
-//           isLocal: true,
-//           routeConfig: {}
-//         }
-//         :
-//         {
-//           microserviceUuid: sourceRoute.destMicroserviceUuid,
-//           isLocal: false,
-//           routeConfig: {
-//             host: 'localhost',
-//             port: 61616,
-//             user: 'agent',
-//             password: 'agent123',
-//             passKey: '123'
-//           }
-//         };
-//       res.push(routeObj);
-//     }
-//   }
-//
-//   return res
-// }
-
 async function _getLogicalNetworkRoutesByFog(iofogUuid, transaction) {
-  let res = [];
+  const res = []
   const query = {
     [Op.or]:
       [
         {
-          sourceIofogUuid: iofogUuid
+          sourceIofogUuid: iofogUuid,
         },
         {
           destIofogUuid: iofogUuid
@@ -1020,68 +979,68 @@ async function _getLogicalNetworkRoutesByFog(iofogUuid, transaction) {
   const routes = await RoutingManager.findAll(query, transaction);
   for (let route of routes) {
     if (route.sourceIofogUuid && route.destIofogUuid && route.isNetworkConnection) {
-      res.push(route);
+      res.push(route)
     }
   }
-  return res;
+  return res
 }
 
 async function _getLogicalRoutesByMicroservice(microserviceUuid, transaction) {
-  let res = [];
+  const res = []
   const query = {
     [Op.or]:
       [
         {
-          sourceMicroserviceUuid: microserviceUuid
+          sourceMicroserviceUuid: microserviceUuid,
         },
         {
-          destMicroserviceUuid: microserviceUuid
-        }
-      ]
-  };
-  const routes = await RoutingManager.findAll(query, transaction);
-  for (let route of routes) {
+          destMicroserviceUuid: microserviceUuid,
+        },
+      ],
+  }
+  const routes = await RoutingManager.findAll(query, transaction)
+  for (const route of routes) {
     if (route.sourceMicroserviceUuid && route.destMicroserviceUuid) {
-      res.push(route);
+      res.push(route)
     }
   }
-  return res;
+  return res
 }
 
 async function deleteMicroserviceWithRoutesAndPortMappings(microserviceUuid, transaction) {
-  const routes = await _getLogicalRoutesByMicroservice(microserviceUuid, transaction);
-  for (let route of routes) {
-    //TODO: simplify after splitting all endpoints service functions to validation and request processing part
+  const routes = await _getLogicalRoutesByMicroservice(microserviceUuid, transaction)
+  for (const route of routes) {
+    // TODO: simplify after splitting all endpoints service functions to validation and request processing part
     const userId = (await MicroserviceManager
-      .findOne({uuid: route.sourceMicroserviceUuid}, transaction))
-      .userId;
+        .findOne({uuid: route.sourceMicroserviceUuid}, transaction))
+        .userId
     const user = {
-      id: userId
-    };
-    await deleteRoute(route.sourceMicroserviceUuid, route.destMicroserviceUuid, user, false, transaction);
+      id: userId,
+    }
+    await deleteRoute(route.sourceMicroserviceUuid, route.destMicroserviceUuid, user, false, transaction)
   }
 
-  const portMappings = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction);
+  const portMappings = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction)
   for (const ports of portMappings) {
     const userId = (await MicroserviceManager
-      .findOne({uuid: ports.microserviceUuid}, transaction))
-      .userId;
+        .findOne({uuid: ports.microserviceUuid}, transaction))
+        .userId
     const user = {
-      id: userId
-    };
-    await deletePortMapping(ports.microserviceUuid, ports.portInternal, user, false, transaction);
+      id: userId,
+    }
+    await deletePortMapping(ports.microserviceUuid, ports.portInternal, user, false, transaction)
   }
   await MicroserviceManager.delete({
-    uuid: microserviceUuid
-  }, transaction);
+    uuid: microserviceUuid,
+  }, transaction)
 }
 
 async function _buildLink(protocol, ip, port) {
   return `${protocol}://${ip}:${port}`
 }
 
-//decorated functions
-const  createMicroserviceWithTracking = TrackingDecorator.trackEvent(createMicroservice, TrackingEventType.MICROSERVICE_CREATED);
+// decorated functions
+const createMicroserviceWithTracking = TrackingDecorator.trackEvent(createMicroservice, TrackingEventType.MICROSERVICE_CREATED)
 
 module.exports = {
   createMicroservice: TransactionDecorator.generateTransaction(createMicroserviceWithTracking),
@@ -1100,5 +1059,5 @@ module.exports = {
   deleteNotRunningMicroservices: deleteNotRunningMicroservices,
   updateRouteOverConnector: updateRouteOverConnector,
   updatePortMappingOverConnector: updatePortMappingOverConnector,
-  deleteMicroserviceWithRoutesAndPortMappings: deleteMicroserviceWithRoutesAndPortMappings
-};
+  deleteMicroserviceWithRoutesAndPortMappings: deleteMicroserviceWithRoutesAndPortMappings,
+}

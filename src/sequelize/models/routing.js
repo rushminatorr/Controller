@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 module.exports = (sequelize, DataTypes) => {
   const Routing = sequelize.define('Routing', {
     id: {
@@ -6,63 +6,62 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true,
       allowNull: false,
-      field: 'id'
+      field: 'id',
     },
     isNetworkConnection: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
-      field: 'is_network_connection'
-    }
+      field: 'is_network_connection',
+    },
   }, {
     timestamps: false,
-    underscored: true
-  });
+    underscored: true,
+  })
   Routing.associate = function(models) {
-
     Routing.belongsTo(models.Microservice, {
       foreignKey: {
         name: 'sourceMicroserviceUuid',
-        field: 'source_microservice_uuid'
+        field: 'source_microservice_uuid',
       },
       as: 'sourceMicroservice',
-      onDelete: 'cascade'
-    });
+      onDelete: 'cascade',
+    })
 
     Routing.belongsTo(models.Microservice, {
       foreignKey: {
         name: 'destMicroserviceUuid',
-        field: 'dest_microservice_uuid'
+        field: 'dest_microservice_uuid',
       },
       as: 'destMicroservice',
-      onDelete: 'cascade'
-    });
+      onDelete: 'cascade',
+    })
 
     Routing.belongsTo(models.Fog, {
       foreignKey: {
         name: 'sourceIofogUuid',
-        field: 'source_iofog_uuid'
+        field: 'source_iofog_uuid',
       },
       as: 'sourceIofog',
-      onDelete: 'set null'
-    });
+      onDelete: 'set null',
+    })
 
     Routing.belongsTo(models.Fog, {
       foreignKey: {
         name: 'destIofogUuid',
-        field: 'dest_iofog_uuid'
+        field: 'dest_iofog_uuid',
       },
       as: 'destIofog',
-      onDelete: 'set null'
-    });
+      onDelete: 'set null',
+    })
 
     Routing.belongsTo(models.ConnectorPrivateSession, {
       foreignKey: {
         name: 'connectorPrivateSessionId',
-        field: 'connector_private_session_id'
+        field: 'connector_private_session_id',
       },
       as: 'connectorPrivateSession',
-      onDelete: 'set null'
-    });
-  };
-  return Routing;
-};
+      onDelete: 'set null',
+    })
+  }
+  return Routing
+}

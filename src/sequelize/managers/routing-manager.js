@@ -11,14 +11,14 @@
  *
  */
 
-const BaseManager = require('./base-manager');
-const models = require('./../models');
-const Routing = models.Routing;
-const ConnectorPrivateSession = models.ConnectorPrivateSession;
+const BaseManager = require('./base-manager')
+const models = require('./../models')
+const Routing = models.Routing
+const ConnectorPrivateSession = models.ConnectorPrivateSession
 
 class RoutingManager extends BaseManager {
   getEntity() {
-    return Routing;
+    return Routing
   }
 
   findAllRoutesByConnectorId(connectorId, transaction) {
@@ -37,5 +37,5 @@ class RoutingManager extends BaseManager {
   }
 }
 
-const instance = new RoutingManager();
-module.exports = instance;
+const instance = new RoutingManager()
+module.exports = instance
