@@ -11,15 +11,15 @@
  *
  */
 
-const BaseManager = require('./base-manager');
-const models = require('./../models');
-const ConnectorPrivateSession = models.ConnectorPrivateSession;
+const BaseManager = require('./base-manager')
+const models = require('./../models')
+const ConnectorPrivateSession = models.ConnectorPrivateSession
 
 class ConnectorPrivateSessionManager extends BaseManager {
   getEntity() {
-    return ConnectorPrivateSession;
+    return ConnectorPrivateSession
   }
 }
 
-const instance = new ConnectorPrivateSessionManager();
-module.exports = instance;
+const instance = new ConnectorPrivateSessionManager()
+module.exports = instance

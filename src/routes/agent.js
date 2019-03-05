@@ -220,49 +220,53 @@ module.exports = [
     method: 'get',
     path: '/api/v3/agent/routes',
     middleware: async (req, res) => {
-      const successCode = constants.HTTP_CODE_SUCCESS;
+      const successCode = constants.HTTP_CODE_SUCCESS
       const errorCodes = [
         {
           code: constants.HTTP_CODE_NOT_FOUND,
-          errors: [Errors.NotFoundError]
+          errors: [Errors.NotFoundError],
         },
         {
           code: constants.HTTP_CODE_UNAUTHORIZED,
-          errors: [Errors.AuthenticationError]
-        }
-      ];
+          errors: [Errors.AuthenticationError],
+        },
+      ]
 
-      const getAgentMicroserviceRoutesEndPoint = ResponseDecorator.handleErrors(AgentController.getAgentMicroserviceRoutesEndPoint, successCode, errorCodes);
-      const responseObject = await getAgentMicroserviceRoutesEndPoint(req);
+      const getAgentMicroserviceRoutesEndPoint = ResponseDecorator.handleErrors(
+          AgentController.getAgentMicroserviceRoutesEndPoint, successCode, errorCodes
+      )
+      const responseObject = await getAgentMicroserviceRoutesEndPoint(req)
 
       res
-        .status(responseObject.code)
-        .send(responseObject.body)
-    }
+          .status(responseObject.code)
+          .send(responseObject.body)
+    },
   },
   {
     method: 'get',
     path: '/api/v3/agent/connectors',
     middleware: async (req, res) => {
-      const successCode = constants.HTTP_CODE_SUCCESS;
+      const successCode = constants.HTTP_CODE_SUCCESS
       const errorCodes = [
         {
           code: constants.HTTP_CODE_NOT_FOUND,
-          errors: [Errors.NotFoundError]
+          errors: [Errors.NotFoundError],
         },
         {
           code: constants.HTTP_CODE_UNAUTHORIZED,
-          errors: [Errors.AuthenticationError]
-        }
-      ];
+          errors: [Errors.AuthenticationError],
+        },
+      ]
 
-      const getAgentConnectorsEndPoint = ResponseDecorator.handleErrors(AgentController.getAgentConnectorsEndPoint, successCode, errorCodes);
-      const responseObject = await getAgentConnectorsEndPoint(req);
+      const getAgentConnectorsEndPoint = ResponseDecorator.handleErrors(
+          AgentController.getAgentConnectorsEndPoint, successCode, errorCodes
+      )
+      const responseObject = await getAgentConnectorsEndPoint(req)
 
       res
-        .status(responseObject.code)
-        .send(responseObject.body)
-    }
+          .status(responseObject.code)
+          .send(responseObject.body)
+    },
   },
   {
     method: 'get',

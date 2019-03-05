@@ -8,13 +8,13 @@
  *  *
  *  * SPDX-License-Identifier: EPL-2.0
  *  *******************************************************************************
- *  
+ *
  */
 
-const BaseManager = require('../managers/base-manager');
-const models = require('./../models');
-const MicroservicePublicMode = models.MicroservicePublicMode;
-const ConnectorPublicSession = models.ConnectorPublicSession;
+const BaseManager = require('../managers/base-manager')
+const models = require('./../models')
+const MicroservicePublicMode = models.MicroservicePublicMode
+const ConnectorPublicSession = models.ConnectorPublicSession
 
 class MicroservicePublicModeManager extends BaseManager {
   getEntity() {
@@ -27,15 +27,15 @@ class MicroservicePublicModeManager extends BaseManager {
         {
           model: ConnectorPublicSession,
           as: 'connectorPublicSession',
-          required: true
-        }
+          required: true,
+        },
       ],
       where: {
-        '$connectorPublicSession.connector_id$': connectorId
-      }
+        '$connectorPublicSession.connector_id$': connectorId,
+      },
     }, {transaction: transaction})
   }
 }
 
-const instance = new MicroservicePublicModeManager();
-module.exports = instance;
+const instance = new MicroservicePublicModeManager()
+module.exports = instance

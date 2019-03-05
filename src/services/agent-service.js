@@ -21,7 +21,7 @@ const FogVersionCommandManager = require('../sequelize/managers/iofog-version-co
 const StraceManager = require('../sequelize/managers/strace-manager')
 const RegistryManager = require('../sequelize/managers/registry-manager')
 const MicroserviceStatusManager = require('../sequelize/managers/microservice-status-manager')
-const MicroserviceStates = require('../enums/microservice-state');
+const MicroserviceStates = require('../enums/microservice-state')
 const FogStates = require('../enums/fog-state')
 const Validator = require('../schemas')
 const Errors = require('../helpers/errors')
@@ -38,7 +38,7 @@ const fs = require('fs')
 const formidable = require('formidable')
 const Sequelize = require('sequelize')
 const Op = Sequelize.Op
-const _ = require('underscore');
+const _ = require('underscore')
 const TrackingDecorator = require('../decorators/tracking-decorator')
 const TrackingEventType = require('../enums/tracking-event-type')
 const TrackingEventManager = require('../sequelize/managers/tracking-event-manager')
@@ -239,13 +239,13 @@ const _updateMicroserviceStatuses = async function(microserviceStatus, transacti
   }
 }
 
-const getAgentConnectors = async function (fog, transaction) {
+const getAgentConnectors = async function(fog, transaction) {
   const connectors = await ConnectorManager.findAll({}, transaction)
-  const res = [];
+  const res = []
   for (const connector of connectors) {
     let cert = ''
     if (connector.serverCert) {
-      cert = fs.readFileSync(connector.serverCert, "utf-8")
+      cert = fs.readFileSync(connector.serverCert, 'utf-8')
     }
     res.push({
       id: connector.id,
@@ -256,116 +256,116 @@ const getAgentConnectors = async function (fog, transaction) {
       userPassword: connector.userPassword,
       devMode: connector.devMode,
       cert: cert,
-      keystorePassword: connector.keystorePassword
+      keystorePassword: connector.keystorePassword,
     })
   }
   return {
-    connectors: res
+    connectors: res,
   }
 }
 
-const getAgentMicroserviceRoutes = async function (fog, transaction) {
+const getAgentMicroserviceRoutes = async function(fog, transaction) {
   const publicRoutes = await _getAgentPublicRoutes(fog, transaction)
   const privateRoutes = await _getAgentPrivateRoutes(fog, transaction)
   return {
-    routes: publicRoutes.concat(privateRoutes)
+    routes: publicRoutes.concat(privateRoutes),
   }
 }
 
-const _getAgentPublicRoutes = async function (fog, transaction) {
-  const res = [];
+const _getAgentPublicRoutes = async function(fog, transaction) {
+  const res = []
   const publicModeMicroservices = await MicroserviceManager.findAllActiveFlowPublicModeMicroservices(fog.uuid, transaction)
   for (const microservice of publicModeMicroservices) {
     const receivers = microservice.publicModes
-      .filter(publicMode => publicMode.iofogUuid)
-      .map(publicMode => {
-        return {
-          microserviceUuid: publicMode.networkMicroserviceUuid,
-          isLocal: true,
-          config: {}
-        }
-      });
+        .filter((publicMode) => publicMode.iofogUuid)
+        .map((publicMode) => {
+          return {
+            microserviceUuid: publicMode.networkMicroserviceUuid,
+            isLocal: true,
+            config: {},
+          }
+        })
     const route = {
       microserviceUuid: microservice.uuid,
       isLocal: true,
       config: {},
-      receivers: receivers
-    };
-    res.push(route);
+      receivers: receivers,
+    }
+    res.push(route)
   }
-  return res;
-};
+  return res
+}
 
-const _getAgentPrivateRoutes = async function (fog, transaction) {
-  const res = [];
-  const sourceMicroservices = await MicroserviceManager.findAllActiveFlowSourceRouteMicroservices(fog.uuid, transaction);
-  const destMicroservices = await MicroserviceManager.findAllActiveFlowDestRouteMicroservices(fog.uuid, transaction);
+const _getAgentPrivateRoutes = async function(fog, transaction) {
+  const res = []
+  const sourceMicroservices = await MicroserviceManager.findAllActiveFlowSourceRouteMicroservices(fog.uuid, transaction)
+  const destMicroservices = await MicroserviceManager.findAllActiveFlowDestRouteMicroservices(fog.uuid, transaction)
 
   for (const sourceMicroservice of sourceMicroservices) {
     const receivers = sourceMicroservice.routes
-      .filter(route => route.sourceIofogUuid && route.destIofogUuid)
-      .map(route => {
-        let obj;
-        if (route.sourceIofogUuid === route.destIofogUuid) {
-          obj = {
-            microserviceUuid: route.destMicroserviceUuid,
-            isLocal: true,
-            config: {}
-          }
-        } else {
-          obj = {
-            //remote consumers
-            microserviceUuid: route.destMicroserviceUuid,
-            isLocal: false,
-            config: {
-              connectorId: route.connectorPrivateSession.connectorId,
-              publisherId: sourceMicroservice.uuid,
-              passKey: route.connectorPrivateSession.passKey
+        .filter((route) => route.sourceIofogUuid && route.destIofogUuid)
+        .map((route) => {
+          let obj
+          if (route.sourceIofogUuid === route.destIofogUuid) {
+            obj = {
+              microserviceUuid: route.destMicroserviceUuid,
+              isLocal: true,
+              config: {},
+            }
+          } else {
+            obj = {
+            // remote consumers
+              microserviceUuid: route.destMicroserviceUuid,
+              isLocal: false,
+              config: {
+                connectorId: route.connectorPrivateSession.connectorId,
+                publisherId: sourceMicroservice.uuid,
+                passKey: route.connectorPrivateSession.passKey,
+              },
             }
           }
-        }
-        return obj;
-      });
+          return obj
+        })
     const route = {
       microserviceUuid: sourceMicroservice.uuid,
       isLocal: true,
       config: {},
-      receivers: receivers
-    };
-    res.push(route);
+      receivers: receivers,
+    }
+    res.push(route)
   }
 
   const destRoutes = _.filter(
-    _.flatten(_.map(destMicroservices, destMicroservice => destMicroservice.destRoutes)),
-    route => route.sourceMicroserviceUuid !== route.destMicroserviceUuid
-  );
-  const groupedRoutes = _.groupBy(destRoutes, route => route.sourceMicroserviceUuid);
+      _.flatten(_.map(destMicroservices, (destMicroservice) => destMicroservice.destRoutes)),
+      (route) => route.sourceMicroserviceUuid !== route.destMicroserviceUuid
+  )
+  const groupedRoutes = _.groupBy(destRoutes, (route) => route.sourceMicroserviceUuid)
   for (const key of Object.keys(groupedRoutes)) {
-    //remote producer
+    // remote producer
     const route = {
       isLocal: false,
       config: {},
-      receivers: []
-    };
-    //local consumers
+      receivers: [],
+    }
+    // local consumers
     for (const sourceRoute of groupedRoutes[key]) {
-      route.microserviceUuid = sourceRoute.sourceMicroserviceUuid;
-      route.config.passKey = sourceRoute.connectorPrivateSession.passKey;
-      route.config.connectorId = sourceRoute.connectorPrivateSession.connectorId;
-      route.config.publisherId = sourceRoute.connectorPrivateSession.publisherId;
+      route.microserviceUuid = sourceRoute.sourceMicroserviceUuid
+      route.config.passKey = sourceRoute.connectorPrivateSession.passKey
+      route.config.connectorId = sourceRoute.connectorPrivateSession.connectorId
+      route.config.publisherId = sourceRoute.connectorPrivateSession.publisherId
       const receiver = {
         microserviceUuid: sourceRoute.destMicroserviceUuid,
         isLocal: true,
-        config: {}
-      };
-      route.receivers.push(receiver);
+        config: {},
+      }
+      route.receivers.push(receiver)
     }
-    res.push(route);
+    res.push(route)
   }
-  return res;
+  return res
 }
 
-const getAgentMicroservices = async function (fog, transaction) {
+const getAgentMicroservices = async function(fog, transaction) {
   const microservices = await MicroserviceManager.findAllActiveFlowMicroservices(fog.uuid, transaction)
 
   const fogTypeId = fog.fogTypeId
@@ -391,8 +391,8 @@ const getAgentMicroservices = async function (fog, transaction) {
       volumeMappings: microservice.volumeMappings,
       imageSnapshot: microservice.imageSnapshot,
       delete: microservice.delete,
-      deleteWithCleanup: microservice.deleteWithCleanup
-    };
+      deleteWithCleanup: microservice.deleteWithCleanup,
+    }
 
     response.push(responseMicroservice)
 

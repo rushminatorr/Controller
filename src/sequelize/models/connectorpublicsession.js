@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 module.exports = (sequelize, DataTypes) => {
   const ConnectorPublicSession = sequelize.define('ConnectorPublicSession', {
     id: {
@@ -6,42 +6,41 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true,
       allowNull: false,
-      field: 'id'
+      field: 'id',
     },
     publisherId: {
       type: DataTypes.TEXT,
-      field: 'publisher_id'
+      field: 'publisher_id',
     },
     passKey: {
       type: DataTypes.TEXT,
-      field: 'pass_key'
+      field: 'pass_key',
     },
     privatePort: {
       type: DataTypes.INTEGER,
-      field: 'private_port'
+      field: 'private_port',
     },
     publicPort: {
       type: DataTypes.INTEGER,
-      field: 'public_port'
+      field: 'public_port',
     },
     maxConnections: {
       type: DataTypes.INTEGER,
-      field: 'max_connections'
-    }
+      field: 'max_connections',
+    },
   }, {
     timestamps: true,
-    underscored: true
-  });
-  ConnectorPublicSession.associate = function (models) {
-
+    underscored: true,
+  })
+  ConnectorPublicSession.associate = function(models) {
     ConnectorPublicSession.belongsTo(models.Connector, {
       foreignKey: {
         name: 'connectorId',
-        field: 'connector_id'
+        field: 'connector_id',
       },
       as: 'connector',
-      onDelete: 'cascade'
-    });
-  };
-  return ConnectorPublicSession;
-};
+      onDelete: 'cascade',
+    })
+  }
+  return ConnectorPublicSession
+}

@@ -99,7 +99,7 @@ class MicroserviceManager extends BaseManager {
           attributes: {
             exclude: ['id', 'source_microservice_uuid',
               'sourceMicroserviceUuid', 'destMicroserviceUuid', 'sourceNetworkMicroserviceUuid',
-              'destNetworkMicroserviceUuid', 'sourceIofogUuid', 'destIofogUuid', 'connectorPrivateSessionId']
+              'destNetworkMicroserviceUuid', 'sourceIofogUuid', 'destIofogUuid', 'connectorPrivateSessionId'],
           },
         },
       ],
@@ -108,14 +108,14 @@ class MicroserviceManager extends BaseManager {
     }, {transaction: transaction})
   }
 
-  findAllActiveFlowSourceRouteMicroservices(iofogUuid, transaction) {
+  findAllActiveFlowSourceRouteMicroservices(ioFogUuid, transaction) {
     return Microservice.findAll({
       include: [
         {
           model: Flow,
           as: 'flow',
           required: true,
-          attributes: ['isActivated']
+          attributes: ['isActivated'],
         },
         {
           model: Routing,
@@ -125,26 +125,26 @@ class MicroserviceManager extends BaseManager {
             {
               model: ConnectorPrivateSession,
               as: 'connectorPrivateSession',
-              required: true
-            }
-          ]
-        }
+              required: true,
+            },
+          ],
+        },
       ],
       where: {
         '$flow.is_activated$': true,
-        iofogUuid: iofogUuid
-      }
+        'iofogUuid': ioFogUuid,
+      },
     }, {transaction: transaction})
   }
 
-  findAllActiveFlowDestRouteMicroservices(iofogUuid, transaction) {
+  findAllActiveFlowDestRouteMicroservices(ioFogUuid, transaction) {
     return Microservice.findAll({
       include: [
         {
           model: Flow,
           as: 'flow',
           required: true,
-          attributes: ['isActivated']
+          attributes: ['isActivated'],
         },
         {
           model: Routing,
@@ -154,26 +154,26 @@ class MicroserviceManager extends BaseManager {
             {
               model: ConnectorPrivateSession,
               as: 'connectorPrivateSession',
-              required: true
-            }
-          ]
-        }
+              required: true,
+            },
+          ],
+        },
       ],
       where: {
         '$flow.is_activated$': true,
-        iofogUuid: iofogUuid
-      }
+        'iofogUuid': ioFogUuid,
+      },
     }, {transaction: transaction})
   }
 
-  findAllActiveFlowPublicModeMicroservices(iofogUuid, transaction) {
+  findAllActiveFlowPublicModeMicroservices(ioFogUuid, transaction) {
     return Microservice.findAll({
       include: [
         {
           model: Flow,
           as: 'flow',
           required: true,
-          attributes: ['isActivated']
+          attributes: ['isActivated'],
         },
         {
           model: MicroservicePublicMode,
@@ -183,15 +183,15 @@ class MicroserviceManager extends BaseManager {
             {
               model: ConnectorPublicSession,
               as: 'connectorPublicSession',
-              required: true
-            }
-          ]
-        }
+              required: true,
+            },
+          ],
+        },
       ],
       where: {
         '$flow.is_activated$': true,
-        iofogUuid: iofogUuid
-      }
+        'iofogUuid': ioFogUuid,
+      },
     }, {transaction: transaction})
   }
 
@@ -305,7 +305,7 @@ class MicroserviceManager extends BaseManager {
             exclude: ['id',
               'sourceMicroserviceUuid', 'destMicroserviceUuid',
               'sourceNetworkMicroserviceUuid', 'destNetworkMicroserviceUuid',
-              'sourceIofogUuid', 'destIofogUuid', 'connectorPrivateSessionId']
+              'sourceIofogUuid', 'destIofogUuid', 'connectorPrivateSessionId'],
           },
         },
       ],
@@ -374,7 +374,7 @@ class MicroserviceManager extends BaseManager {
       where: where,
       attributes: {
         exclude: microserviceExcludedFields,
-      }
+      },
     }, {
       transaction: transaction,
     })
@@ -385,7 +385,7 @@ class MicroserviceManager extends BaseManager {
       where: where,
       attributes: {
         exclude: microserviceExcludedFields,
-      }
+      },
     }, {
       transaction: transaction,
     })

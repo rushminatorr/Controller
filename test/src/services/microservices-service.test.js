@@ -1344,4 +1344,142 @@ describe('Microservices Service', () => {
       })
     })
   })
+
+
+  describe('.updateRouteOverConnector()', () => {
+    const transaction = {}
+    const error = 'Error!'
+    const connector = {
+      id: 1,
+    }
+
+    const route = {
+      id: 1,
+      isNetworkConnection: true,
+      sourceMicroserviceUuid: 'testSourceMicroserviceUuid',
+      destMicroserivceUuid: 'testDestMicroserviceUuid',
+      sourceIofogUuid: 'testSourceIofogUuid',
+      destIofogUuid: 'testDestIofogUuid',
+    }
+
+    const routes = [
+      route,
+    ]
+
+    def('subject', () => $subject.updateRouteOverConnector(connector, transaction))
+    def('findAllRoutesByConnectorIdResponse', () => Promise.resolve(routes))
+    def('updateChangeTrackingResponse', () => Promise.resolve())
+    def('updateChangeTrackingResponse2', () => Promise.resolve())
+
+    beforeEach(() => {
+      $sandbox.stub(RoutingManager, 'findAllRoutesByConnectorId').returns($findAllRoutesByConnectorIdResponse)
+      $sandbox.stub(ChangeTrackingService, 'update')
+          .onFirstCall().returns($updateChangeTrackingResponse)
+          .onSecondCall().returns($updateChangeTrackingResponse2)
+    })
+
+    it('calls RoutingManager#findAllRoutesByConnectorId() with correct args', async () => {
+      await $subject
+      expect(RoutingManager.findAllRoutesByConnectorId).to.have.been.calledWith(connector.id, transaction)
+    })
+
+    context('when RoutingManager#findAllRoutesByConnectorId() fails', () => {
+      def('findAllRoutesByConnectorIdResponse', () => Promise.reject(error))
+
+      it(`fails with ${error}`, () => {
+        return expect($subject).to.be.rejectedWith(error)
+      })
+    })
+
+    context('when RoutingManager#findAllRoutesByConnectorId() succeeds', () => {
+      it('calls ChangeTrackingService#update() with correct args', async () => {
+        await $subject
+        expect(ChangeTrackingService.update).to.have.been.calledWith(
+            route.sourceIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction
+        )
+      })
+
+      context('when ChangeTrackingService#update() fails', () => {
+        def('updateChangeTrackingResponse', () => Promise.reject(error))
+
+        it(`fails with ${error}`, () => {
+          return expect($subject).to.be.rejectedWith(error)
+        })
+      })
+
+      context('when ChangeTrackingService#update() succeeds', () => {
+        it('calls ChangeTrackingService#update() with correct args', async () => {
+          await $subject
+          expect(ChangeTrackingService.update).to.have.been.calledWith(
+              route.destIofogUuid, ChangeTrackingService.events.microserviceRouting, transaction
+          )
+        })
+
+        context('when ChangeTrackingService#update() fails', () => {
+          def('updateChangeTrackingResponse', () => Promise.reject(error))
+
+          it(`fails with ${error}`, () => {
+            return expect($subject).to.be.rejectedWith(error)
+          })
+        })
+
+        context('when ChangeTrackingService#update() succeeds', () => {
+          it('fulfills the promise', () => {
+            return expect($subject).to.eventually.equal(undefined)
+          })
+        })
+      })
+    })
+  })
+
+  describe('.getMicroservice()', () => {
+    const transaction = {}
+    const error = 'Error!'
+
+    const user = {
+      id: 15,
+    }
+
+    const microserviceUuid = 'testMicroserviceUuid'
+
+    const response = {
+      dataValues: {
+        uuid: 'testUuid',
+      },
+    }
+
+    def('subject', () => $subject.getMicroservice(microserviceUuid, user, isCLI, transaction))
+    def('findMicroserviceResponse', () => Promise.resolve(response))
+    def('findPortMappingsResponse', () => Promise.resolve([]))
+    def('findVolumeMappingsResponse', () => Promise.resolve([]))
+    def('findRoutesResponse', () => Promise.resolve([]))
+
+    beforeEach(() => {
+      $sandbox.stub(MicroserviceManager, 'findOneExcludeFields').returns($findMicroserviceResponse)
+      $sandbox.stub(MicroservicePortManager, 'findAll').returns($findPortMappingsResponse)
+      $sandbox.stub(VolumeMappingManager, 'findAll').returns($findVolumeMappingsResponse)
+      $sandbox.stub(RoutingManager, 'findAll').returns($findRoutesResponse)
+    })
+
+    it('calls MicroserviceManager#findOneExcludeFields() with correct args', async () => {
+      await $subject
+      expect(MicroserviceManager.findOneExcludeFields).to.have.been.calledWith({
+        uuid: microserviceUuid, delete: false,
+      }, transaction)
+    })
+
+    context('when MicroserviceManager#findOneExcludeFields() fails', () => {
+      def('findMicroserviceResponse', () => Promise.reject(error))
+
+      it(`fails with ${error}`, () => {
+        return expect($subject).to.be.rejectedWith(error)
+      })
+    })
+
+    context('when MicroserviceManager#findOneExcludeFields() succeeds', () => {
+      it('fulfills the promise', () => {
+        return expect($subject).to.eventually.have.property('uuid')
+      })
+    })
+  })
 })

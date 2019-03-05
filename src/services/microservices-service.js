@@ -11,7 +11,7 @@
  *
  */
 
-const logger = require('../logger');
+const logger = require('../logger')
 const TransactionDecorator = require('../decorators/transaction-decorator')
 const MicroserviceManager = require('../sequelize/managers/microservice-manager')
 const MicroserviceStatusManager = require('../sequelize/managers/microservice-status-manager')
@@ -283,16 +283,18 @@ async function updateRouteOverConnector(connector, transaction) {
 
   const iofogUuids = _.flatten(_.map(
       _.filter(
-        routes, (route) => {return !!route.isNetworkConnection}
+          routes, (route) => {
+            return !!route.isNetworkConnection
+          }
       ),
-      route => [route.sourceIofogUuid, route.destIofogUuid]
-    )
+      (route) => [route.sourceIofogUuid, route.destIofogUuid]
+  )
   )
 
   const onlyUnique = (value, index, self) => self.indexOf(value) === index
   const uniqueIofogUuids = iofogUuids
-    .filter(onlyUnique)
-    .filter(val => val !== null)
+      .filter(onlyUnique)
+      .filter((val) => val !== null)
 
   for (const iofogUuid of uniqueIofogUuids) {
     await ChangeTrackingService.update(iofogUuid, ChangeTrackingService.events.microserviceRouting, transaction)
@@ -419,32 +421,6 @@ async function listPortMappings(microserviceUuid, user, isCLI, transaction) {
 
   const portsPairs = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction)
   return await _buildPortsList(portsPairs, transaction)
-}
-
-async function getPhysicalConnections(microservice, transaction) {
-  const res = []
-  const pubModes = await MicroservicePublicModeManager.findAll({microserviceUuid: microservice.uuid}, transaction)
-  for (const pm of pubModes) {
-    res.push(pm.networkMicroserviceUuid)
-  }
-
-  const sourceRoutes = await RoutingManager.findAll({sourceMicroserviceUuid: microservice.uuid}, transaction)
-  for (const sr of sourceRoutes) {
-    if (!sr.sourceIofogUuid || !sr.destIofogUuid) {
-      continue
-    } else if (sr.sourceIofogUuid === sr.destIofogUuid) {
-      res.push(sr.destMicroserviceUuid)
-    } else if (sr.sourceIofogUuid !== sr.destIofogUuid) {
-      res.push(sr.sourceNetworkMicroserviceUuid)
-    }
-  }
-
-  const netwRoutes = await RoutingManager.findAll({destNetworkMicroserviceUuid: microservice.uuid}, transaction)
-  for (const nr of netwRoutes) {
-    res.push(nr.destMicroserviceUuid)
-  }
-
-  return res
 }
 
 async function createVolumeMapping(microserviceUuid, volumeMappingData, user, isCLI, transaction) {
@@ -660,9 +636,9 @@ async function _createSimpleRoute(sourceMicroservice, destMicroservice, transact
 async function _updateNetworkMicroserviceConfigs(networkMicroserviceUuids, connector, transaction) {
   const microservices = await MicroserviceManager.findAll({uuid: networkMicroserviceUuids}, transaction)
 
-  let caCert;
+  let caCert
   if (!connector.devMode && connector.caCert) {
-    caCert = AppHelper.trimCertificate(fs.readFileSync(connector.caCert, "utf-8"))
+    caCert = AppHelper.trimCertificate(fs.readFileSync(connector.caCert, 'utf-8'))
   }
 
   for (const microservice of microservices) {
@@ -691,7 +667,6 @@ async function _updateNetworkMicroserviceConfigs(networkMicroserviceUuids, conne
 }
 
 async function _createRouteOverConnector(sourceMicroservice, destMicroservice, user, transaction) {
-
   const connectorSession = await ConnectorSessionService.openSessionOnRandomConnector(false, sourceMicroservice.uuid, transaction)
   const privateSession = connectorSession.session
   const connector = connectorSession.connector
@@ -699,8 +674,8 @@ async function _createRouteOverConnector(sourceMicroservice, destMicroservice, u
   const connectorPrivateSessionData = {
     publisherId: privateSession.publisherId,
     passKey: privateSession.passKey,
-    connectorId: connector.id
-  };
+    connectorId: connector.id,
+  }
 
   const connectorPrivateSession = await ConnectorPrivateSessionManager.create(connectorPrivateSessionData, transaction)
 
@@ -711,7 +686,7 @@ async function _createRouteOverConnector(sourceMicroservice, destMicroservice, u
     destMicroserviceUuid: destMicroservice.uuid,
     sourceIofogUuid: sourceMicroservice.iofogUuid,
     destIofogUuid: destMicroservice.iofogUuid,
-    connectorPrivateSessionId: connectorPrivateSession.id
+    connectorPrivateSessionId: connectorPrivateSession.id,
   }
   await RoutingManager.create(routeData, transaction)
 
@@ -760,15 +735,16 @@ async function _deleteRouteOverConnector(route, transaction) {
 
   const where = {
     id: {[Op.ne]: privateSession.id},
-    publisherId: privateSession.publisherId
-  };
+    publisherId: privateSession.publisherId,
+  }
 
   const otherPublisherPrivateSessions = await ConnectorPrivateSessionManager.findAll(where, transaction)
   if (otherPublisherPrivateSessions.length === 0) {
     try {
       await ConnectorSessionService.closeSessionOnConnector(connector, false, privateSession.publisherId)
     } catch (e) {
-      logger.warn(`Can't close private session ${privateSession.publisherId} on connector ${connector.name}. Delete manually if necessary`)
+      logger.warn(`Can't close private session ${privateSession.publisherId} on connector ${connector.name}. 
+      Delete manually if necessary`)
     }
   }
 
@@ -794,14 +770,14 @@ async function _createSimplePortMapping(microservice, portMappingData, user, tra
 }
 
 async function _createPortMappingOverConnector(microservice, portMappingData, user, transaction) {
-  //open connector
+  // open connector
   const connectorSession = await ConnectorSessionService.openSessionOnRandomConnector(
-    true,
-    microservice.uuid,
-    transaction
+      true,
+      microservice.uuid,
+      transaction
   )
 
-  const session = connectorSession.session;
+  const session = connectorSession.session
   const connector = connectorSession.connector
 
   const connectorPublicSessionData = {
@@ -810,8 +786,8 @@ async function _createPortMappingOverConnector(microservice, portMappingData, us
     privatePort: session.privatePort,
     publicPort: session.publicPort,
     maxConnections: session.maxConnections,
-    connectorId: connector.id
-  };
+    connectorId: connector.id,
+  }
 
   const connectorPublicSession = await ConnectorPublicSessionManager.create(connectorPublicSessionData, transaction)
 
@@ -819,7 +795,7 @@ async function _createPortMappingOverConnector(microservice, portMappingData, us
 
   let caCert
   if (!connector.devMode && connector.caCert) {
-    caCert = AppHelper.trimCertificate(fs.readFileSync(connector.caCert, "utf-8"))
+    caCert = AppHelper.trimCertificate(fs.readFileSync(connector.caCert, 'utf-8'))
   }
   // create netw ms1
   const netwMsConfig = {
@@ -859,8 +835,8 @@ async function _createPortMappingOverConnector(microservice, portMappingData, us
     networkMicroserviceUuid: networkMicroservice.uuid,
     iofogUuid: microservice.iofogUuid,
     microservicePortId: msPortMapping.id,
-    connectorPublicSessionId: connectorPublicSession.id
-  };
+    connectorPublicSessionId: connectorPublicSession.id,
+  }
   await MicroservicePublicModeManager.create(msPubModeData, transaction)
 
 
@@ -902,7 +878,8 @@ async function _deletePortMappingOverConnector(microservice, msPorts, user, tran
   try {
     await ConnectorSessionService.closeSessionOnConnector(connector, true, publicSession.publisherId)
   } catch (e) {
-    logger.warn(`Can't close public session ${publicSession.publisherId} on connector ${connector.publicIp}. Delete manually if necessary`)
+    logger.warn(`Can't close public session ${publicSession.publisherId} on connector ${connector.publicIp}. 
+    Delete manually if necessary`)
   }
   await MicroservicePublicModeManager.delete({id: pubModeData.id}, transaction)
   await MicroservicePortManager.delete({id: msPorts.id}, transaction)
@@ -936,7 +913,9 @@ async function _buildPortsList(portsPairs, transaction) {
     }
     if (ports.isPublic) {
       const pubMode = await MicroservicePublicModeManager.findOne({microservicePortId: ports.id}, transaction)
-      const connectorPublicSession = await ConnectorPublicSessionManager.findOne({id: pubMode.connectorPublicSessionId}, transaction)
+      const connectorPublicSession = await ConnectorPublicSessionManager.findOne(
+          {id: pubMode.connectorPublicSessionId}, transaction
+      )
       const connector = await ConnectorManager.findOne({id: connectorPublicSession.connectorId}, transaction)
 
       portMappingResposeData.publicLink = await _buildLink(
@@ -950,19 +929,6 @@ async function _buildPortsList(portsPairs, transaction) {
   return res
 }
 
-async function _listPortMappings(microserviceUuid, user, isCLI, transaction) {
-  const where = isCLI
-    ? {uuid: microserviceUuid}
-    : {uuid: microserviceUuid, userId: user.id};
-  const microservice = await MicroserviceManager.findOne(where, transaction)
-  if (!microservice) {
-    throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_MICROSERVICE_UUID, microserviceUuid))
-  }
-
-  const portsPairs = await MicroservicePortManager.findAll({microserviceUuid: microserviceUuid}, transaction);
-  return await _buildPortsList(portsPairs, transaction)
-}
-
 async function _getLogicalNetworkRoutesByFog(iofogUuid, transaction) {
   const res = []
   const query = {
@@ -972,12 +938,12 @@ async function _getLogicalNetworkRoutesByFog(iofogUuid, transaction) {
           sourceIofogUuid: iofogUuid,
         },
         {
-          destIofogUuid: iofogUuid
-        }
-      ]
-  };
-  const routes = await RoutingManager.findAll(query, transaction);
-  for (let route of routes) {
+          destIofogUuid: iofogUuid,
+        },
+      ],
+  }
+  const routes = await RoutingManager.findAll(query, transaction)
+  for (const route of routes) {
     if (route.sourceIofogUuid && route.destIofogUuid && route.isNetworkConnection) {
       res.push(route)
     }

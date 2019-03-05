@@ -389,6 +389,76 @@ describe('Agent Controller', () => {
     })
   })
 
+  describe('.getAgentMicroserviceRoutesEndPoint()', () => {
+    def('fog', () => 'fog!')
+
+    def('req', () => ({
+      body: {},
+    }))
+    def('response', () => Promise.resolve())
+    def('subject', () => $subject.getAgentMicroserviceRoutesEndPoint($req, $fog))
+
+    beforeEach(() => {
+      $sandbox.stub(AgentService, 'getAgentMicroserviceRoutes').returns($response)
+    })
+
+    it('calls AgentService.getAgentMicroserviceRoutes with correct args', async () => {
+      await $subject
+      expect(AgentService.getAgentMicroserviceRoutes).to.have.been.calledWith($fog)
+    })
+
+    context('when AgentService#getAgentMicroserviceRoutes fails', () => {
+      const error = 'Error!'
+
+      def('response', () => Promise.reject(error))
+
+      it(`fails with "${error}"`, () => {
+        return expect($subject).to.be.rejectedWith(error)
+      })
+    })
+
+    context('when AgentService#getAgentMicroserviceRoutes succeeds', () => {
+      it(`succeeds`, () => {
+        return expect($subject).to.eventually.equal(undefined)
+      })
+    })
+  })
+
+  describe('.getAgentConnectorsEndPoint()', () => {
+    def('fog', () => 'fog!')
+
+    def('req', () => ({
+      body: {},
+    }))
+    def('response', () => Promise.resolve())
+    def('subject', () => $subject.getAgentConnectorsEndPoint($req, $fog))
+
+    beforeEach(() => {
+      $sandbox.stub(AgentService, 'getAgentConnectors').returns($response)
+    })
+
+    it('calls AgentService.getAgentConnectors with correct args', async () => {
+      await $subject
+      expect(AgentService.getAgentConnectors).to.have.been.calledWith($fog)
+    })
+
+    context('when AgentService#getAgentConnectors fails', () => {
+      const error = 'Error!'
+
+      def('response', () => Promise.reject(error))
+
+      it(`fails with "${error}"`, () => {
+        return expect($subject).to.be.rejectedWith(error)
+      })
+    })
+
+    context('when AgentService#getAgentConnectors succeeds', () => {
+      it(`succeeds`, () => {
+        return expect($subject).to.eventually.equal(undefined)
+      })
+    })
+  })
+
   describe('getAgentMicroserviceEndPoint()', () => {
     def('fog', () => 'fog!')
     def('microserviceUuid', () => 'testUuid')

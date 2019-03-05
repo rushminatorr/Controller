@@ -22,39 +22,39 @@ module.exports = (sequelize, DataTypes) => {
     },
     caCert: {
       type: DataTypes.TEXT,
-      field: 'ca_cert'
+      field: 'ca_cert',
     },
     serverCert: {
       type: DataTypes.TEXT,
-      field: 'server_cert'
+      field: 'server_cert',
     },
     isSelfSignedCert: {
       type: DataTypes.BOOLEAN,
       field: 'self_signed_cert',
-      defaultValue: false
+      defaultValue: false,
     },
     devMode: {
       type: DataTypes.BOOLEAN,
       field: 'dev_mode',
-      defaultValue: false
+      defaultValue: false,
     },
     port: {
       type: DataTypes.INTEGER,
       field: 'port',
-      defaultValue: 61616
+      defaultValue: 61616,
     },
     user: {
       type: DataTypes.TEXT,
-      field: 'user'
+      field: 'user',
     },
     userPassword: {
       type: DataTypes.TEXT,
-      field: 'user_password'
+      field: 'user_password',
     },
     keystorePassword: {
       type: DataTypes.TEXT,
-      field: 'keystore_password'
-    }
+      field: 'keystore_password',
+    },
   }, {
     timestamps: true,
     underscored: true,

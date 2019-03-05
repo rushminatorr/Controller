@@ -66,8 +66,8 @@ async function updateConnector(connectorData, transaction) {
 async function deleteConnector(connectorData, transaction) {
   await Validator.validate(connectorData, Validator.schemas.connectorDelete)
   const queryConnectorData = {
-    name: connectorData.name
-  };
+    name: connectorData.name,
+  }
   const connector = await ConnectorManager.findOne(queryConnectorData, transaction)
   if (!connector) {
     throw new Errors.NotFoundError(AppHelper.formatMessage(ErrorMessages.INVALID_CONNECTOR_NAME, connectorData.name))

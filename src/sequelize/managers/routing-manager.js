@@ -27,12 +27,12 @@ class RoutingManager extends BaseManager {
         {
           model: ConnectorPrivateSession,
           as: 'connectorPrivateSession',
-          required: true
-        }
+          required: true,
+        },
       ],
       where: {
-        '$connectorPrivateSession.connector_id$': connectorId
-      }
+        '$connectorPrivateSession.connector_id$': connectorId,
+      },
     }, {transaction: transaction})
   }
 }

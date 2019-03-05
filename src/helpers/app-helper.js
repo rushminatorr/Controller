@@ -20,6 +20,8 @@ const Config = require('../config')
 const path = require('path')
 const portscanner = require('portscanner')
 const format = require('string-format')
+const https = require('https')
+const http = require('http')
 
 const ALGORITHM = 'aes-256-ctr'
 const IV_LENGTH = 16
@@ -67,6 +69,49 @@ function generateRandomString(size) {
 async function checkPortAvailability(port) {
   return new Promise((resolve) => {
     return resolve(portscanner.checkPortStatus(port))
+  })
+}
+
+async function makeRequest(isHttps, options, data) {
+  return new Promise((resolve, reject) => {
+    const httpreq = (isHttps ? https : http).request(options, function(response) {
+      let output = ''
+      response.setEncoding('utf8')
+
+      response.on('data', function(chunk) {
+        output += chunk
+      })
+
+      response.on('end', function() {
+        if (response.statusCode === 204) {
+          return resolve()
+        }
+        let responseObj = {}
+        try {
+          responseObj = JSON.parse(output)
+        } catch (e) {
+          logger.warn(e.message)
+        }
+
+        if (responseObj.errormessage) {
+          return reject(new Error(responseObj.errormessage))
+        } else {
+          return resolve(responseObj)
+        }
+      })
+    })
+
+    httpreq.on('error', function(err) {
+      console.log(err)
+      if (err instanceof Error) {
+        return reject(new Error(err.message))
+      } else {
+        return reject(new Error(JSON.stringify(err)))
+      }
+    })
+
+    httpreq.write(data)
+    httpreq.end()
   })
 }
 
@@ -194,6 +239,7 @@ module.exports = {
   isValidPort,
   isValidDomain,
   checkPortAvailability,
+  makeRequest,
   generateAccessToken,
   checkTransaction,
   deleteUndefinedFields,

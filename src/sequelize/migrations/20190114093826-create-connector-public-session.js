@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
@@ -8,48 +8,48 @@ module.exports = {
         primaryKey: true,
         autoIncrement: true,
         allowNull: false,
-        field: 'id'
+        field: 'id',
       },
       publisherId: {
         type: Sequelize.TEXT,
-        field: 'publisher_id'
+        field: 'publisher_id',
       },
       passKey: {
         type: Sequelize.TEXT,
-        field: 'pass_key'
+        field: 'pass_key',
       },
       privatePort: {
         type: Sequelize.INTEGER,
-        field: 'private_port'
+        field: 'private_port',
       },
       publicPort: {
         type: Sequelize.INTEGER,
-        field: 'public_port'
+        field: 'public_port',
       },
       maxConnections: {
         type: Sequelize.INTEGER,
-        field: 'max_connections'
+        field: 'max_connections',
       },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
-        field: 'created_at'
+        field: 'created_at',
       },
       updatedAt: {
         allowNull: false,
         type: Sequelize.DATE,
-        field: 'updated_at'
+        field: 'updated_at',
       },
       connectorId: {
         type: Sequelize.INTEGER,
         field: 'connector_id',
-        references: { model: 'Connectors', key: 'id' },
-        onDelete: 'cascade'
-      }
-    });
+        references: {model: 'Connectors', key: 'id'},
+        onDelete: 'cascade',
+      },
+    })
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('ConnectorPublicSessions');
-  }
-};
+    return queryInterface.dropTable('ConnectorPublicSessions')
+  },
+}

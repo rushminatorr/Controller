@@ -120,13 +120,13 @@ module.exports = (sequelize, DataTypes) => {
 
     Microservice.hasMany(models.Routing, {
       foreignKey: 'dest_microservice_uuid',
-      as: 'destRoutes'
-    });
+      as: 'destRoutes',
+    })
 
     Microservice.hasMany(models.MicroservicePublicMode, {
       foreignKey: 'microservice_uuid',
-      as: 'publicModes'
-    });
+      as: 'publicModes',
+    })
 
     Microservice.hasOne(models.MicroserviceStatus, {
       foreignKey: 'microservice_uuid',

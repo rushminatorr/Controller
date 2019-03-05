@@ -12,6 +12,7 @@ const ChangeTrackingService = require('../../../src/services/change-tracking-ser
 const MicroserviceStatusManager = require('../../../src/sequelize/managers/microservice-status-manager')
 const MicroserviceService = require('../../../src/services/microservices-service')
 const RegistryManager = require('../../../src/sequelize/managers/registry-manager')
+const ConnectorManager = require('../../../src/sequelize/managers/connector-manager')
 const TunnelManager = require('../../../src/sequelize/managers/tunnel-manager')
 const StraceManager = require('../../../src/sequelize/managers/strace-manager')
 const ioFogVersionCommandManager = require('../../../src/sequelize/managers/iofog-version-command-manager')
@@ -24,6 +25,7 @@ const path = require('path')
 const MicroserviceStates = require('../../../src/enums/microservice-state')
 const FogStates = require('../../../src/enums/fog-state')
 const TrackingEventManager = require('../../../src/sequelize/managers/tracking-event-manager')
+const fs = require('fs')
 
 global.appRoot = path.resolve(__dirname)
 
@@ -723,6 +725,294 @@ describe('Agent Service', () => {
   })
 
 
+  describe('.getAgentConnectors()', () => {
+    const transaction = {}
+    const fog = {}
+    const error = 'Error!'
+
+    const connectors = [
+      {
+        id: 1,
+        name: 'testName',
+        domain: 'testHost',
+        port: 5500,
+        user: 'testUser',
+        userPassword: 'testPassword',
+        devMode: true,
+        serverCert: 'testServerCert',
+        keystorePassword: 'testKeystorePassword',
+      },
+    ]
+
+    const connectorsResponse = {
+      connectors: [
+        {
+          id: 1,
+          name: 'testName',
+          host: 'testHost',
+          port: 5500,
+          user: 'testUser',
+          userPassword: 'testPassword',
+          devMode: true,
+          cert: 'testCert',
+          keystorePassword: 'testKeystorePassword',
+        },
+      ],
+    }
+
+    def('subject', () => $subject.getAgentConnectors(fog, transaction))
+
+    def('getAgentConnectorsResponse', () => Promise.resolve(connectorsResponse))
+    def('findAllConnectorsResponse', () => Promise.resolve(connectors))
+
+    beforeEach(() => {
+      $sandbox.stub(ConnectorManager, 'findAll').returns($findAllConnectorsResponse)
+      $sandbox.stub(fs, 'readFileSync').returns('testCert')
+    }
+    )
+
+    it('calls ConnectorManager#findAll() with correct args', async () => {
+      await $subject
+      expect(ConnectorManager.findAll).to.have.been.calledWith({}, transaction)
+    })
+
+    context('when ConnectorManager#findAll() fails', () => {
+      def('findAllConnectorsResponse', () => Promise.reject(error))
+
+      it(`fails with ${error}`, () => {
+        return expect($subject).to.be.rejectedWith(error)
+      })
+    })
+
+    context('when ConnectorManager#findAll() succeeds', () => {
+      it(`succeeds`, () => {
+        return expect($subject).to.eventually.deep.equal(connectorsResponse)
+      })
+    })
+  })
+
+  describe('.getAgentMicroserviceRoutes()', () => {
+    const transaction = {}
+    const error = 'Error!'
+
+    const publicModeMicroservices = [
+      {
+        uuid: 'testMicroserviceUuid',
+        imageId: '',
+        config: '{}',
+        name: 'testName',
+        rebuild: false,
+        rootHostAccess: false,
+        logSize: 15,
+        volumeMappings: 'testVolumeMappings',
+        imageSnapshot: 'testImageSnapshot',
+        delete: false,
+        deleteWithCleanup: false,
+        publicModes: [
+          {
+            microserviceUuid: 'testMicroserviceUuid',
+            networkMicroserviceUuid: 'testNetworkMicroserviceUuid',
+            iofogUuid: 'testIofogUuid',
+            microservicePortId: 1,
+          },
+        ],
+      },
+    ]
+
+    const getAgentPublicRoutesResponse = [
+      {
+        microserviceUuid: 'testMicroserviceUuid',
+        isLocal: true,
+        config: {},
+        receivers: [
+          {
+            microserviceUuid: 'testNetworkMicroserviceUuid',
+            isLocal: true,
+            config: {},
+          },
+        ],
+      },
+    ]
+
+    const privateModeSourceMicroservices = [
+      {
+        uuid: 'testSourceMicroserviceUuid',
+        imageId: '',
+        config: '{}',
+        name: 'testName',
+        rebuild: false,
+        rootHostAccess: false,
+        logSize: 15,
+        volumeMappings: 'testVolumeMappings',
+        imageSnapshot: 'testImageSnapshot',
+        delete: false,
+        deleteWithCleanup: false,
+        routes: [
+          {
+            id: 1,
+            isNetworkConnection: true,
+            sourceMicroserviceUuid: 'testSourceMicroserviceUuid',
+            destMicroserviceUuid: 'testDestMicroserviceUuid',
+            sourceIofogUuid: 'testSourceIofogUuid',
+            destIofogUuid: 'testDestIofogUuid',
+            connectorPrivateSession: {
+              publisherId: 'testSourceMicroserviceUuid',
+              passKey: 'testPassKey',
+              connectorId: 1,
+            },
+          },
+        ],
+      },
+    ]
+
+    const privateModeDestMicroservices = [
+      {
+        uuid: 'testDestMicroserviceUuid2',
+        imageId: '',
+        config: '{}',
+        name: 'testName2',
+        rebuild: false,
+        rootHostAccess: false,
+        logSize: 15,
+        volumeMappings: 'testVolumeMappings',
+        imageSnapshot: 'testImageSnapshot',
+        delete: false,
+        deleteWithCleanup: false,
+        destRoutes: [
+          {
+            id: 2,
+            isNetworkConnection: true,
+            sourceMicroserviceUuid: 'testSourceMicroserviceUuid2',
+            destMicroserviceUuid: 'testDestMicroserviceUuid2',
+            sourceIofogUuid: 'testSourceIofogUuid',
+            destIofogUuid: 'testDestIofogUuid',
+            connectorPrivateSession: {
+              publisherId: 'testSourceMicroserviceUuid2',
+              passKey: 'testPassKey2',
+              connectorId: 1,
+            },
+          },
+        ],
+      },
+    ]
+
+    const getAgentPrivateRoutesResponse = [
+      {
+        microserviceUuid: 'testSourceMicroserviceUuid',
+        isLocal: true,
+        config: {},
+        receivers: [
+          {
+            microserviceUuid: 'testDestMicroserviceUuid',
+            isLocal: false,
+            config: {
+              connectorId: 1,
+              publisherId: 'testSourceMicroserviceUuid',
+              passKey: 'testPassKey',
+            },
+          },
+        ],
+      },
+      {
+        microserviceUuid: 'testSourceMicroserviceUuid2',
+        isLocal: false,
+        config: {
+          passKey: 'testPassKey2',
+          connectorId: 1,
+          publisherId: 'testSourceMicroserviceUuid2',
+        },
+        receivers: [
+          {
+            microserviceUuid: 'testDestMicroserviceUuid2',
+            isLocal: true,
+            config: {},
+          },
+        ],
+      },
+    ]
+
+    const getAgentMicroserviceRoutesResponse = {
+      routes: getAgentPublicRoutesResponse.concat(getAgentPrivateRoutesResponse),
+    }
+
+    def('uuid', () => 'testUuid')
+    def('fogTypeId', () => 1)
+
+    def('fog', () => ({
+      uuid: $uuid,
+      fogTypeId: $fogTypeId,
+    }))
+
+    def('subject', () => $subject.getAgentMicroserviceRoutes($fog, transaction))
+
+    def('findAllActiveFlowPublicModeMicroservicesResponse', () => Promise.resolve(publicModeMicroservices))
+    def('findAllActiveFlowSourceRouteMicroservicesResponse', () => Promise.resolve(privateModeSourceMicroservices))
+    def('findAllActiveFlowDestRouteMicroservicesResponse', () => Promise.resolve(privateModeDestMicroservices))
+
+    beforeEach(() => {
+      $sandbox.stub(MicroserviceManager, 'findAllActiveFlowPublicModeMicroservices')
+          .returns($findAllActiveFlowPublicModeMicroservicesResponse)
+      $sandbox.stub(MicroserviceManager, 'findAllActiveFlowSourceRouteMicroservices')
+          .returns($findAllActiveFlowSourceRouteMicroservicesResponse)
+      $sandbox.stub(MicroserviceManager, 'findAllActiveFlowDestRouteMicroservices')
+          .returns($findAllActiveFlowDestRouteMicroservicesResponse)
+    }
+    )
+
+    it('calls MicroserviceManager#findAllActiveFlowPublicModeMicroservices() with correct args', async () => {
+      await $subject
+      expect(MicroserviceManager.findAllActiveFlowPublicModeMicroservices)
+          .to.have.been.calledWith($fog.uuid, transaction)
+    })
+
+    context('when MicroserviceManager#findAllActiveFlowPublicModeMicroservices() fails', () => {
+      def('findAllActiveFlowPublicModeMicroservicesResponse', () => Promise.reject(error))
+
+      it(`fails with ${error}`, () => {
+        return expect($subject).to.be.rejectedWith(error)
+      })
+    })
+
+    context('when MicroserviceManager#findAllActiveFlowPublicModeMicroservices() succeeds', () => {
+      it('calls MicroserviceManager#findAllActiveFlowSourceRouteMicroservices() with correct args', async () => {
+        await $subject
+        expect(MicroserviceManager.findAllActiveFlowSourceRouteMicroservices)
+            .to.have.been.calledWith($fog.uuid, transaction)
+      })
+
+      context('when MicroserviceManager#findAllActiveFlowSourceRouteMicroservices() fails', () => {
+        def('findAllActiveFlowSourceRouteMicroservicesResponse', () => Promise.reject(error))
+
+        it(`fails with ${error}`, () => {
+          return expect($subject).to.be.rejectedWith(error)
+        })
+      })
+
+      context('when MicroserviceManager#findAllActiveFlowSourceRouteMicroservices() succeeds', () => {
+        it('calls MicroserviceManager#findAllActiveFlowDestRouteMicroservices() with correct args', async () => {
+          await $subject
+          expect(MicroserviceManager.findAllActiveFlowDestRouteMicroservices)
+              .to.have.been.calledWith($fog.uuid, transaction)
+        })
+
+        context('when MicroserviceManager#findAllActiveFlowDestRouteMicroservices() fails', () => {
+          def('findAllActiveFlowDestRouteMicroservicesResponse', () => Promise.reject(error))
+
+          it(`fails with ${error}`, () => {
+            return expect($subject).to.be.rejectedWith(error)
+          })
+        })
+
+        context('when MicroserviceManager#findAllActiveFlowDestRouteMicroservices() succeeds', () => {
+          it(`succeeds`, () => {
+            return expect($subject).to.eventually.deep.equal(getAgentMicroserviceRoutesResponse)
+          })
+        })
+      })
+    })
+  })
+
+
   describe('.getAgentMicroservices()', () => {
     const transaction = {}
     const error = 'Error!'
@@ -793,7 +1083,6 @@ describe('Agent Service', () => {
         imageSnapshot: 'testImageSnapshot',
         delete: false,
         deleteWithCleanup: false,
-        routes: routes,
         registryId: 10,
       }],
     }
@@ -811,12 +1100,10 @@ describe('Agent Service', () => {
     def('subject', () => $subject.getAgentMicroservices($fog, transaction))
 
     def('findAllMicroservicesResponse', () => Promise.resolve([microserviceWithValidImage, microserviceWithInvalidImage]))
-    def('getPhysicalConnectionsResponse', () => Promise.resolve(routes))
     def('updateResponse', () => Promise.resolve(microserviceResponse))
 
     beforeEach(() => {
       $sandbox.stub(MicroserviceManager, 'findAllActiveFlowMicroservices').returns($findAllMicroservicesResponse)
-      $sandbox.stub(MicroserviceService, 'getPhysicalConnections').returns($getPhysicalConnectionsResponse)
       $sandbox.stub(MicroserviceManager, 'update').returns($updateResponse)
     })
 
@@ -834,45 +1121,28 @@ describe('Agent Service', () => {
     })
 
     context('when MicroserviceManager#findAllActiveFlowMicroservices() succeeds', () => {
-      it('calls MicroserviceService.getPhysicalConnections with correct args', async () => {
+      it('calls MicroserviceManager.update with correct args', async () => {
         await $subject
-        expect(MicroserviceService.getPhysicalConnections).to.have.been.calledWith(microserviceWithValidImage, transaction)
+        expect(MicroserviceManager.update).to.have.been.calledWith({
+          uuid: microserviceWithValidImage.uuid,
+        }, {
+          rebuild: false,
+        }, transaction)
       })
 
-      context('when MicroserviceService#getPhysicalConnections fails', () => {
+      context('when MicroserviceManager#update fails', () => {
         const error = 'Error!'
 
-        def('getPhysicalConnectionsResponse', () => error)
+        def('updateResponse', () => error)
 
         it(`fails with "${error}"`, () => {
           return expect($subject).to.be.rejectedWith = (error)
         })
       })
 
-      context('when MicroserviceService#getPhysicalConnections succeeds', () => {
-        it('calls MicroserviceManager.update with correct args', async () => {
-          await $subject
-          expect(MicroserviceManager.update).to.have.been.calledWith({
-            uuid: microserviceWithValidImage.uuid,
-          }, {
-            rebuild: false,
-          }, transaction)
-        })
-
-        context('when MicroserviceManager#update fails', () => {
-          const error = 'Error!'
-
-          def('updateResponse', () => error)
-
-          it(`fails with "${error}"`, () => {
-            return expect($subject).to.be.rejectedWith = (error)
-          })
-        })
-
-        context('when MicroserviceManager#update succeeds', () => {
-          it(`succeeds`, () => {
-            return expect($subject).to.eventually.deep.equal(microserviceResponse)
-          })
+      context('when MicroserviceManager#update succeeds', () => {
+        it(`succeeds`, () => {
+          return expect($subject).to.eventually.deep.equal(microserviceResponse)
         })
       })
     })
@@ -1477,7 +1747,8 @@ describe('Agent Service', () => {
 
     def('fog', () => 'fog!')
     def('events', () => [])
-    def('transaction', () => {})
+    def('transaction', () => {
+    })
 
     def('subject', () => $subject.postTracking($events, $fog, $transaction))
 

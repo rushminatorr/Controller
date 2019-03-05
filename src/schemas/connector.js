@@ -12,56 +12,56 @@
  */
 
 const connectorCreate = {
-  "id": "/connectorCreate",
-  "type": "object",
-  "properties": {
-    "name": {"type": "string", "minLength": 1},
-    "domain": {"type": "string", "minLength": 4},
-    "publicIp": {"type": "string", "minLength": 7},
-    "caCert": {"type": "string"},
-    "serverCert": {"type": "string"},
-    "isSelfSignedCert": {"type": "boolean"},
-    "devMode": {"type": "boolean"},
-    "keystorePassword": {"type": "string"},
-    "port": {"type": "integer"},
-    "user": {"type": "string"},
-    "userPassword": {"type": "string"}
+  'id': '/connectorCreate',
+  'type': 'object',
+  'properties': {
+    'name': {'type': 'string', 'minLength': 1},
+    'domain': {'type': 'string', 'minLength': 4},
+    'publicIp': {'type': 'string', 'minLength': 7},
+    'caCert': {'type': 'string'},
+    'serverCert': {'type': 'string'},
+    'isSelfSignedCert': {'type': 'boolean'},
+    'devMode': {'type': 'boolean'},
+    'keystorePassword': {'type': 'string'},
+    'port': {'type': 'integer'},
+    'user': {'type': 'string'},
+    'userPassword': {'type': 'string'},
   },
-  "required": ["publicIp", "name", "port", "user", "userPassword"],
-  "additionalProperties": false
-};
+  'required': ['publicIp', 'name', 'port', 'user', 'userPassword'],
+  'additionalProperties': false,
+}
 
 const connectorUpdate = {
-  "id": "/connectorUpdate",
-  "type": "object",
-  "properties": {
-    "name": {"type": "string", "minLength": 1},
-    "domain": {"type": "string", "minLength": 4},
-    "publicIp": {"type": "string", "minLength": 7},
-    "caCert": {"type": "string"},
-    "serverCert": {"type": "string"},
-    "isSelfSignedCert": {"type": "boolean"},
-    "devMode": {"type": "boolean"},
-    "keystorePassword": {"type": "string"},
-    "port": {"type": "integer"},
-    "user": {"type": "string"},
-    "userPassword": {"type": "string"}
+  'id': '/connectorUpdate',
+  'type': 'object',
+  'properties': {
+    'name': {'type': 'string', 'minLength': 1},
+    'domain': {'type': 'string', 'minLength': 4},
+    'publicIp': {'type': 'string', 'minLength': 7},
+    'caCert': {'type': 'string'},
+    'serverCert': {'type': 'string'},
+    'isSelfSignedCert': {'type': 'boolean'},
+    'devMode': {'type': 'boolean'},
+    'keystorePassword': {'type': 'string'},
+    'port': {'type': 'integer'},
+    'user': {'type': 'string'},
+    'userPassword': {'type': 'string'},
   },
-  "required": ["name"],
-  "additionalProperties": false
-};
+  'required': ['name'],
+  'additionalProperties': false,
+}
 
 const connectorDelete = {
-  "id": "/connectorDelete",
-  "type": "object",
-  "properties": {
-    "name": {"type": "string", "minLength": 1}
+  'id': '/connectorDelete',
+  'type': 'object',
+  'properties': {
+    'name': {'type': 'string', 'minLength': 1},
   },
-  "required": ["name"],
-  "additionalProperties": false
-};
+  'required': ['name'],
+  'additionalProperties': false,
+}
 
 module.exports = {
   mainSchemas: [connectorCreate, connectorUpdate, connectorDelete],
-  innerSchemas: []
-};
+  innerSchemas: [],
+}

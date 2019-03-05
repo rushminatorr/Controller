@@ -13,8 +13,7 @@
 
 const connectorAccessMode = {
   PUBLIC: 'public',
-  PRIVATE: 'private'
-};
+  PRIVATE: 'private',
+}
 
-module.exports = connectorAccessMode;
-
+module.exports = connectorAccessMode
