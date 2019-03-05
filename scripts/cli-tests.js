@@ -90,10 +90,10 @@ function testConnectorSection() {
   console.log('\n=============================\nStarting connector section..')
 
   responseContains(testCommand('connector add -i 127.0.0.1 -n Connector1 -d iofog.test.org  -c testCertPath' +
-    ' -s -H'), 'Connector has been created successfully.')
-  responseEquals(testCommand('connector update -i 127.0.0.1 -n Connector2 -d iofog.test.org  -c testCertPath' +
+    ' -s -H -p 5500 -u agent -P agent123'), 'Connector has been created successfully.')
+  responseEquals(testCommand('connector update -i 127.0.0.1 -n Connector1 -d iofog.test.com  -c testCertPath' +
     ' -s -H'), 'Connector has been updated successfully.')
-  responseEquals(testCommand('connector remove -i 127.0.0.1'), 'Connector has been removed successfully.')
+  responseEquals(testCommand('connector remove -n Connector1'), 'Connector has been removed successfully.')
   responseIsArray(testCommand('connector list'))
 }
 
