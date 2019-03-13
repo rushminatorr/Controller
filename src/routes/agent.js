@@ -223,10 +223,6 @@ module.exports = [
       const successCode = constants.HTTP_CODE_SUCCESS
       const errorCodes = [
         {
-          code: constants.HTTP_CODE_NOT_FOUND,
-          errors: [Errors.NotFoundError],
-        },
-        {
           code: constants.HTTP_CODE_UNAUTHORIZED,
           errors: [Errors.AuthenticationError],
         },
@@ -248,10 +244,6 @@ module.exports = [
     middleware: async (req, res) => {
       const successCode = constants.HTTP_CODE_SUCCESS
       const errorCodes = [
-        {
-          code: constants.HTTP_CODE_NOT_FOUND,
-          errors: [Errors.NotFoundError],
-        },
         {
           code: constants.HTTP_CODE_UNAUTHORIZED,
           errors: [Errors.AuthenticationError],
