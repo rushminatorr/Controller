@@ -15,6 +15,8 @@ module.exports = {
           return queryInterface.renameColumn('Connectors', 'cert', 'ca_cert')
         }).then(() => {
           return queryInterface.addColumn('Connectors', 'server_cert', Sequelize.TEXT)
+        }).then(() => {
+          return queryInterface.addColumn('Connectors', 'token', Sequelize.TEXT)
         })
   },
 
@@ -32,6 +34,8 @@ module.exports = {
           return queryInterface.renameColumn('Connectors', 'ca_cert', 'cart')
         }).then(() => {
           return queryInterface.removeColumn('Connectors', 'server_cert')
+        }).then(() => {
+          return queryInterface.removeColumn('Connectors', 'token')
         })
   },
 }

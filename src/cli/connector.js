@@ -94,6 +94,11 @@ class Connector extends BaseCLIHandler {
         description: 'Acrive MQ user password',
         group: [constants.CMD_ADD, constants.CMD_UPDATE],
       },
+      {
+        name: 'token', alias: 't', type: String,
+        description: 'Connector REST API token',
+        group: [constants.CMD_ADD, constants.CMD_UPDATE],
+      },
     ]
     this.commands = {
       [constants.CMD_ADD]: 'Add a new Connector.',
@@ -201,6 +206,7 @@ function _createConnectorObject(cliData) {
     port: cliData.port,
     user: cliData.user,
     userPassword: cliData.userPassword,
+    token: cliData.token,
   }
 
   return AppHelper.deleteUndefinedFields(connectorObj)

@@ -55,6 +55,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       field: 'keystore_password',
     },
+    token: {
+      type: DataTypes.TEXT,
+      field: 'token',
+    },
   }, {
     timestamps: true,
     underscored: true,

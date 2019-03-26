@@ -26,8 +26,9 @@ const connectorCreate = {
     'port': {'type': 'integer'},
     'user': {'type': 'string'},
     'userPassword': {'type': 'string'},
+    'token': {'type': 'string'},
   },
-  'required': ['publicIp', 'name', 'port', 'user', 'userPassword'],
+  'required': ['publicIp', 'name', 'port', 'user', 'userPassword', 'token'],
   'additionalProperties': false,
 }
 
@@ -46,6 +47,7 @@ const connectorUpdate = {
     'port': {'type': 'integer'},
     'user': {'type': 'string'},
     'userPassword': {'type': 'string'},
+    'token': {'type': 'string'},
   },
   'required': ['name'],
   'additionalProperties': false,

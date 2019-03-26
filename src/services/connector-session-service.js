@@ -65,6 +65,7 @@ async function _openSessionOnConnector(connector, isPublicAccess, publisherId) {
     headers: {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(data),
+      'Authorization': connector.token,
     },
   }
   if (!connector.devMode && connector.caCert && connector.isSelfSignedCert === true) {
@@ -97,6 +98,9 @@ async function closeSessionOnConnector(connector, isPublicAccess, publisherId) {
     port: port,
     path: path,
     method: 'DELETE',
+    headers: {
+      'Authorization': connector.token,
+    },
   }
   if (!connector.devMode && connector.caCert && connector.isSelfSignedCert === true) {
     const ca = fs.readFileSync(connector.caCert)
