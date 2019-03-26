@@ -1416,7 +1416,7 @@ describe('Microservices Service', () => {
       },
     }
 
-    def('subject', () => $subject.getMicroservice(microserviceUuid, user, isCLI, transaction))
+    def('subject', () => $subject.getMicroserviceEndPoint(microserviceUuid, user, isCLI, transaction))
     def('findMicroserviceResponse', () => Promise.resolve(response))
     def('findPortMappingsResponse', () => Promise.resolve([]))
     def('findVolumeMappingsResponse', () => Promise.resolve([]))

@@ -442,7 +442,7 @@ async function listPortMappingsEndPoint(microserviceUuid, user, isCLI, transacti
   return await _buildPortsList(portsPairs, transaction)
 }
 
-async function createVolumeMapping(microserviceUuid, volumeMappingData, user, isCLI, transaction) {
+async function createVolumeMappingEndPoint(microserviceUuid, volumeMappingData, user, isCLI, transaction) {
   await Validator.validate(volumeMappingData, Validator.schemas.volumeMappings)
 
   const where = isCLI
