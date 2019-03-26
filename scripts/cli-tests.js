@@ -90,7 +90,7 @@ function testConnectorSection() {
   console.log('\n=============================\nStarting connector section..')
 
   responseContains(testCommand('connector add -i 127.0.0.1 -n Connector1 -d iofog.test.org  -c testCertPath' +
-    ' -s -H -p 5500 -u agent -P agent123'), 'Connector has been created successfully.')
+    ' -s -H -p 5500 -u agent -P agent123 -t testToken'), 'Connector has been created successfully.')
   responseEquals(testCommand('connector update -i 127.0.0.1 -n Connector1 -d iofog.test.com  -c testCertPath' +
     ' -s -H'), 'Connector has been updated successfully.')
   responseEquals(testCommand('connector remove -n Connector1'), 'Connector has been removed successfully.')
@@ -305,7 +305,6 @@ function testDiagnosticsSection() {
     ' -c ' + catalogId + ' -F ' + flowId + ' -I ' + ioFogUuid + ' -g \'{}\' -v /host_src:/container_src:rw -l 15 -R' +
     ' -p 80:8080:false -u ' + userId), microserviceCreateFields)
   const microserviceUuid = microserviceCreateResponse.uuid
-
   try {
     responseEquals(testCommand('diagnostics strace-update -e -i ' + microserviceUuid),
         'Microservice strace has been enabled')
@@ -315,7 +314,8 @@ function testDiagnosticsSection() {
       ' -u testFtpUser -s testFtpPass -d ftpTestDestination'), 'FTP error')
     responseContains(testCommand('diagnostics image-snapshot-create -i ' + microserviceUuid),
         'Microservice image snapshot has been created successfully.')
-    responseContains(testCommand('diagnostics image-snapshot-get -i ' + microserviceUuid),
+    const res = testCommand('diagnostics image-snapshot-get -i ' + microserviceUuid)
+    responseContains(res,
         'Image snapshot is not available for this microservice.')
     executeCommand('microservice remove -i ' + microserviceUuid)
     executeCommand('iofog remove -i ' + ioFogUuid)

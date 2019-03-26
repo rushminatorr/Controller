@@ -26,6 +26,7 @@ describe('Connector Session Service', () => {
       id: 15,
       domain: 'testDomain',
       devMode: true,
+      token: 'testToken',
     }
 
     const data = JSON.stringify({
@@ -41,6 +42,7 @@ describe('Connector Session Service', () => {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(data),
+        'Authorization': connector.token,
       },
     }
 
@@ -56,6 +58,7 @@ describe('Connector Session Service', () => {
         id: 15,
         domain: 'testDomain',
         devMode: true,
+        token: 'testToken',
       },
     }
 
@@ -115,6 +118,7 @@ describe('Connector Session Service', () => {
       id: 15,
       domain: 'testDomain',
       devMode: true,
+      token: 'testToken',
     }
 
     const options = {
@@ -122,6 +126,9 @@ describe('Connector Session Service', () => {
       port: constants.CONNECTOR_HTTP_PORT,
       path: '/route/private/' + publisherId,
       method: 'DELETE',
+      headers: {
+        Authorization: connector.token,
+      },
     }
 
     def('subject', () => $subject.closeSessionOnConnector(connector, isPublicAccess, publisherId))
