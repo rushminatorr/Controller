@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "f6f55915-03c9-4758-afb2-80734c2e9e01",
+		"_postman_id": "b729b57d-2b43-4f3e-a4ce-3e98b534baba",
 		"name": "Controller Testing",
 		"description": "iofog-controller collection",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -1673,6 +1673,54 @@
 					"response": []
 				},
 				{
+					"name": "Tracking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "8774bfa2-c3f6-46e1-8965-cedd4322ccf2",
+								"exec": [
+									"tests[\"Status code is 204\"] = responseCode.code === 204;"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{agent-token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"events\": [\n        {\n            \"uuid\": \"test_tracking\",\n            \"sourceType\": \"agent\",\n            \"timestamp\": 1551694999,\n            \"type\": \"test\",\n            \"data\": {\n                \"event\":\"test\"\n            }\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{host}}/api/v3/agent/tracking",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v3",
+								"agent",
+								"tracking"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Delete agent node",
 					"event": [
 						{
@@ -3263,7 +3311,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"name2\",\n  \"config\": \"string\",\n  \"catalogItemId\": {{item-id}},\n  \"flowId\": {{flow-id}},\n  \"iofogUuid\": \"{{node-id}}\",\n  \"rootHostAccess\": true,\n  \"logSize\": 0,\n  \"volumeMappings\": [\n    {\n      \"hostDestination\": \"/var/dest\",\n      \"containerDestination\": \"/var/dest\",\n      \"accessMode\": \"rw\"\n    }\n  ],\n  \"ports\": [\n    {\n      \"internal\": 1,\n      \"external\": 1,\n      \"publicMode\": false\n    }\n  ],\n  \"routes\": [\n  ]\n}\n"
+							"raw": "{\n  \"name\": \"name2\",\n  \"config\": \"string\",\n  \"catalogItemId\": {{item-id}},\n  \"flowId\": {{flow-id}},\n  \"iofogUuid\": \"{{node-id}}\",\n  \"rootHostAccess\": true,\n  \"logSize\": 0,\n  \"volumeMappings\": [\n    {\n      \"hostDestination\": \"/var/dest\",\n      \"containerDestination\": \"/var/dest\",\n      \"accessMode\": \"rw\"\n    }\n  ],\n  \"ports\": [\n    {\n      \"internal\": 1,\n      \"external\": 1,\n      \"publicMode\": false\n    }\n  ],\n  \"routes\": [\n  ],\n  \"env\": [\n    {\n      \"key\": \"KEY1\",\n      \"value\": \"value1\"\n    },\n    {\n      \"key\": \"KEY2\",\n      \"value\": \"value2\"\n    }\n  ],\n  \"cmd\": [\n  \t\"test\",\n  \t\"--arg1\",\n  \t\"--arg2\"\n  ]\n}\n"
 						},
 						"url": {
 							"raw": "{{host}}/api/v3/microservices",
@@ -3346,7 +3394,7 @@
 									"",
 									"var data = JSON.parse(responseBody);",
 									"",
-									"tests[\"Response validation passed\"] = data.uuid && data.config && data.name && data.hasOwnProperty('rootHostAccess') && data.hasOwnProperty('logSize');"
+									"tests[\"Response validation passed\"] = data.uuid && data.config && data.name && data.hasOwnProperty('rootHostAccess') && data.hasOwnProperty('logSize') && data.hasOwnProperty('env') && data.env.length === 2 && data.hasOwnProperty('cmd') && data.cmd.length === 3;"
 								],
 								"type": "text/javascript"
 							}
