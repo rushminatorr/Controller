@@ -20,6 +20,7 @@ variables:
   repository: 'focal-freedom-236620/rushcontroller'
   type: $(Build.SourceBranchName)
   commit: $(Build.SourceVersion)
+  sem_tag:
 
 steps:
   - task: NodeTool@0
@@ -49,6 +50,10 @@ steps:
     displayName: 'tag'
     name: setvarStep
     condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+
+  - bash: |
+      echo $sem_tag
+    displayName: 'tag'
 
   - task: Docker@2
     inputs:
