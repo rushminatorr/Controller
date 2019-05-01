@@ -10,6 +10,9 @@ trigger:
     exclude:
       - README.md
 
+pr:
+  - master
+
 pool:
   vmImage: 'Ubuntu-16.04'
 
@@ -38,6 +41,16 @@ steps:
     displayName: 'integration tests'
 
   - task: Docker@2
+  - bash: |
+      echo current tag..
+      sem_tag=$(type)
+      sem_tag=${sem_tag:0:3}
+      '##vso[task.setvariable variable=sem_tag]$sem_tag'
+    displayName: 'tag'
+    name: setvarStep
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+
+  - task: Docker@2
     inputs:
       containerRegistry: 'Edgeworx GCP'
       repository: $(repository)
@@ -46,6 +59,7 @@ steps:
         $(type)
         $(commit)
         latest
+        $(sem_tag)
 
   - script: |
       echo "npm test"
